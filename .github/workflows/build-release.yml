@@ -1,0 +1,517 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Cancel in-progress runs when a new run is triggered on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Workflow-level environment variables
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+  GRAALVM_VERSION: '21'
+  APP_NAME: 'BragDocBuddy'
+  APP_DESCRIPTION: 'A command line tool for journaling daily accomplishments'
+  APP_VENDOR: 'BragDocBuddy'
+  APP_COPYRIGHT: '2025 BragDocBuddy'
+
+jobs:
+  # ============================================================================
+  # Version Job - Derives semantic version from conventional commits (Angular schema)
+  # Outputs version to be used by all other jobs
+  # Version is committed only in the release job after successful builds
+  # ============================================================================
+  version:
+    name: Derive Version from Conventional Commits
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push initial tag if needed
+    outputs:
+      version: ${{ steps.version_output.outputs.version }}
+      version_tag: ${{ steps.version_output.outputs.version_tag }}
+      version_changed: ${{ steps.check_version.outputs.changed }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0  # Required for full git history
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check if initial release
+      id: check_initial
+      run: |
+        # Fetch all tags from remote
+        git fetch --tags
+
+        # Check if any version tags exist
+        if ! git tag -l "v*" | grep -q .; then
+          echo "No version tags found - this is the initial release"
+          echo "is_initial=true" >> $GITHUB_OUTPUT
+        else
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -1)
+          echo "Version tags already exist (latest: $LATEST_TAG)"
+          echo "is_initial=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Derive semantic version (for existing releases)
+      id: semver
+      if: steps.check_initial.outputs.is_initial == 'false'
+      uses: paulhatch/semantic-version@v5.4.0
+      with:
+        tag_prefix: "v"
+        major_pattern: "(BREAKING CHANGE:|\\w+!:)"  # BREAKING CHANGE or type!:
+        minor_pattern: "(feat:|feature:)"           # feat: triggers minor bump
+        version_format: "${major}.${minor}.${patch}"
+        bump_each_commit: false
+        search_commit_body: true
+        user_format_type: "csv"
+
+    - name: Set version output
+      id: version_output
+      run: |
+        if [ "${{ steps.check_initial.outputs.is_initial }}" == "true" ]; then
+          # Initial release - use 1.0.0
+          echo "version=1.0.0" >> $GITHUB_OUTPUT
+          echo "version_tag=v1.0.0" >> $GITHUB_OUTPUT
+          echo "📦 Initial release version: 1.0.0"
+        else
+          # Use semantic version from previous step
+          echo "version=${{ steps.semver.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "version_tag=${{ steps.semver.outputs.version_tag }}" >> $GITHUB_OUTPUT
+          echo "📦 Derived version: ${{ steps.semver.outputs.version }}"
+        fi
+
+    - name: Check if version changed
+      id: check_version
+      run: |
+        NEW_VERSION="${{ steps.version_output.outputs.version }}"
+        CURRENT_VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+        IS_INITIAL="${{ steps.check_initial.outputs.is_initial }}"
+
+        echo "Current version in gradle.properties: $CURRENT_VERSION"
+        echo "New version: $NEW_VERSION"
+        echo "Is initial release: $IS_INITIAL"
+
+        # If initial release, always treat as version change
+        if [ "$IS_INITIAL" == "true" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "✅ Initial release: 0.0.1 → 1.0.0"
+        elif [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+          echo "✅ Version will be updated: $CURRENT_VERSION → $NEW_VERSION"
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+          echo "ℹ️  Version unchanged: $CURRENT_VERSION"
+        fi
+
+  # ============================================================================
+  # Check Job - Runs all verification tasks (tests, ktlint, architecture tests)
+  # ============================================================================
+  check:
+    name: Run Checks (Tests, ktlint, etc.)
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        cache-read-only: false
+
+    - name: Set version from conventional commits
+      run: |
+        echo "Running checks with version: ${{ needs.version.outputs.version }}"
+        # Update version in gradle.properties (preserving other properties)
+        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
+        if grep -q "^version=" gradle.properties; then
+          sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
+        else
+          echo "version=${{ needs.version.outputs.version }}" >> gradle.properties
+        fi
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Run all checks (tests, ktlint, etc.)
+      run: ./gradlew check jacocoTestReport
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          build/test-results/**/*.xml
+
+    - name: Add coverage to PR
+      id: jacoco
+      uses: madrapps/jacoco-report@v1.6.1
+      if: github.event_name == 'pull_request'
+      with:
+        paths: |
+          ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        min-coverage-overall: 40
+        min-coverage-changed-files: 60
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v5
+      if: always()
+      with:
+        name: coverage-reports
+        path: |
+          build/reports/jacoco/test/html/
+          build/reports/tests/test/
+        retention-days: 30
+
+  # ============================================================================
+  # Build JAR - Creates universal fat JAR using derived version
+  # ============================================================================
+  build-jar:
+    name: Build Fat JAR
+    needs: [version, check]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        cache-read-only: false
+
+    - name: Set version from conventional commits
+      run: |
+        echo "Building version: ${{ needs.version.outputs.version }}"
+        # Update version in gradle.properties (preserving other properties)
+        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
+        if grep -q "^version=" gradle.properties; then
+          sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
+        else
+          echo "version=${{ needs.version.outputs.version }}" >> gradle.properties
+        fi
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Build fat JAR
+      run: ./gradlew clean shadowJar
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v5
+      with:
+        name: ${{ env.APP_NAME }}-jar
+        path: build/libs/${{ env.APP_NAME }}-*.jar
+        # Main branch: 30 days (backup), Feature branches/PRs: 14 days (testing/debugging)
+        retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 14 }}
+
+  # ============================================================================
+  # Build Native Images - Creates platform-specific native executables
+  # ============================================================================
+  build-native:
+    name: Build Native Image (${{ matrix.platform }})
+    needs: [version, check]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            artifact-name: BragDocBuddy-linux
+            executable-suffix: ""
+          - os: windows-latest
+            platform: Windows
+            artifact-name: BragDocBuddy-windows
+            executable-suffix: ".exe"
+          - os: macos-latest
+            platform: macOS
+            artifact-name: BragDocBuddy-macos
+            executable-suffix: ""
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up GraalVM
+      uses: graalvm/setup-graalvm@v1
+      with:
+        java-version: ${{ env.GRAALVM_VERSION }}
+        distribution: 'graalvm-community'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        cache-read-only: false
+
+    - name: Set version from conventional commits
+      shell: bash
+      run: |
+        echo "Building version: ${{ needs.version.outputs.version }}"
+        # Update version in gradle.properties (preserving other properties)
+        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
+        if grep -q "^version=" gradle.properties; then
+          sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
+        else
+          echo "version=${{ needs.version.outputs.version }}" >> gradle.properties
+        fi
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Configure temp directory for Windows native build
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        # Workaround for GraalVM plugin path issue on Windows
+        # See: https://github.com/graalvm/native-build-tools/issues/754
+        echo "" >> gradle.properties  # Ensure newline
+        echo "org.gradle.jvmargs=-Djava.io.tmpdir=D:/temp" >> gradle.properties
+        mkdir -p D:/temp
+        echo "Configured temp directory for Windows build"
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Build native image
+      run: ./gradlew nativeCompile
+
+    - name: Upload native executable
+      uses: actions/upload-artifact@v5
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: build/native/nativeCompile/${{ env.APP_NAME }}${{ matrix.executable-suffix }}
+        retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 14 }}
+
+  # ============================================================================
+  # Build Installers - Creates platform-specific installers using jpackage
+  # ============================================================================
+  build-installers:
+    name: Build Installer (${{ matrix.platform }})
+    needs: build-jar
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            installer-type: deb
+            artifact-name: BragDocBuddy-installer-linux
+          - os: windows-latest
+            platform: Windows
+            installer-type: exe
+            artifact-name: BragDocBuddy-installer-windows
+          - os: macos-latest
+            platform: macOS
+            installer-type: pkg
+            artifact-name: BragDocBuddy-installer-macos
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+    - name: Download JAR artifact
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ env.APP_NAME }}-jar
+        path: build/libs
+
+    - name: Sanitize version for jpackage
+      id: sanitize_version
+      shell: bash
+      run: |
+        # jpackage requires version format: major[.minor[.build]]
+        # Remove -SNAPSHOT and other non-numeric suffixes
+        VERSION="${{ needs.build-jar.outputs.version }}"
+        CLEAN_VERSION=$(echo "$VERSION" | sed 's/-SNAPSHOT//' | sed 's/-.*$//' | sed 's/[^0-9.]//g')
+
+        # Ensure version has at least major.minor format
+        if [[ ! "$CLEAN_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+          CLEAN_VERSION="1.0.0"
+        fi
+
+        echo "Original version: $VERSION"
+        echo "Sanitized version: $CLEAN_VERSION"
+        echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create installer with jpackage
+      shell: bash
+      run: |
+        mkdir -p dist
+        jpackage \
+          --input build/libs \
+          --name "${{ env.APP_NAME }}" \
+          --main-jar ${{ env.APP_NAME }}-${{ needs.build-jar.outputs.version }}.jar \
+          --main-class MainKt \
+          --dest dist \
+          --type ${{ matrix.installer-type }} \
+          --app-version ${{ steps.sanitize_version.outputs.clean_version }} \
+          --description "${{ env.APP_DESCRIPTION }}" \
+          --vendor "${{ env.APP_VENDOR }}" \
+          --copyright "${{ env.APP_COPYRIGHT }}"
+
+    - name: Upload installer
+      uses: actions/upload-artifact@v5
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: dist/*
+        retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 14 }}
+
+  # ============================================================================
+  # Release Job
+  # ============================================================================
+  release:
+    name: Create GitHub Release
+    if: |
+      needs.version.outputs.version_changed == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    needs: [version, build-jar, build-native, build-installers]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update and commit version to gradle.properties
+      run: |
+        NEW_VERSION="${{ needs.version.outputs.version }}"
+        CURRENT_VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+
+        echo "Updating gradle.properties: $CURRENT_VERSION → $NEW_VERSION"
+
+        # Update version in gradle.properties
+        sed -i.bak "s/^version=.*/version=$NEW_VERSION/" gradle.properties && rm gradle.properties.bak
+
+        # Check if there are changes to commit
+        if git diff --quiet gradle.properties; then
+          echo "ℹ️  No changes to commit - version already up to date"
+        else
+          # Configure git
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Commit and push
+          git add gradle.properties
+          git commit -m "chore: update version to $NEW_VERSION"
+          git push
+
+          echo "✅ Version committed to repository"
+        fi
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v6
+      with:
+        path: release-artifacts
+
+    - name: Reorganize artifacts with platform-specific names
+      working-directory: release-artifacts
+      run: |
+        # Create a flat structure with platform-specific names for native executables
+        mkdir -p final
+
+        # Copy JAR
+        find . -name "*.jar" -exec cp {} final/ \;
+
+        # Copy and rename native executables to include platform
+        if [ -f BragDocBuddy-linux/BragDocBuddy ]; then
+          cp BragDocBuddy-linux/BragDocBuddy final/BragDocBuddy-linux
+        fi
+
+        if [ -f BragDocBuddy-macos/BragDocBuddy ]; then
+          cp BragDocBuddy-macos/BragDocBuddy final/BragDocBuddy-macos
+        fi
+
+        if [ -f BragDocBuddy-windows/BragDocBuddy.exe ]; then
+          cp BragDocBuddy-windows/BragDocBuddy.exe final/BragDocBuddy-windows.exe
+        fi
+
+        # Copy installers
+        find . -name "*.deb" -exec cp {} final/ \;
+        find . -name "*.exe" -exec cp {} final/ \;
+        find . -name "*.pkg" -exec cp {} final/ \;
+
+        echo "Reorganized artifacts:"
+        ls -lh final/
+
+    - name: Generate checksums
+      working-directory: release-artifacts/final
+      run: |
+        echo "# SHA256 Checksums" > checksums.txt
+        echo "" >> checksums.txt
+        sha256sum * | grep -v checksums.txt >> checksums.txt
+        echo ""
+        echo "Generated checksums:"
+        cat checksums.txt
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ needs.version.outputs.version }}
+        name: Release v${{ needs.version.outputs.version }}
+        files: release-artifacts/final/*
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(needs.version.outputs.version, '-') }}
+        fail_on_unmatched_files: false
+        body: |
+          ## Release v${{ needs.version.outputs.version }}
+
+          A CLI tool for maintaining a "brag doc document" - your personal record of professional accomplishments.
+
+          ### Download and Update
+
+          **Linux:**
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-linux
+          chmod +x BragDocBuddy-linux
+          ./BragDocBuddy-linux
+          ```
+
+          **macOS:**
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-macos
+          chmod +x BragDocBuddy-macos
+          ./BragDocBuddy-macos
+          ```
+
+          **Windows (PowerShell):**
+          ```powershell
+          Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-windows.exe" -OutFile "BragDocBuddy.exe"
+          .\BragDocBuddy.exe
+          ```

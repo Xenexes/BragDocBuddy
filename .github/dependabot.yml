@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: daily
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Xenexes"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "Xenexes"

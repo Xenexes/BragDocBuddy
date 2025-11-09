@@ -1,16 +1,31 @@
-package de.xenexes
+import api.cli.BragCliApplication
+import org.koin.core.context.GlobalContext.startKoin
+import org.koin.core.context.GlobalContext.stopKoin
+import kotlin.system.exitProcess
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-fun main() {
-    val name = "Kotlin"
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    println("Hello, " + name + "!")
+fun main(args: Array<String>) {
+    try {
+        startKoin {
+            modules(appModules)
+        }
 
-    for (i in 1..5) {
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        println("i = $i")
+        val app = BragCliApplication()
+        app.run(args)
+    } catch (e: ConfigurationException) {
+        println("Configuration Error: ${e.message}")
+        println("\nPlease ensure the following environment variables are set:")
+        println("  BRAG_LOG            - Path to your brag documents directory (required)")
+        println("  BRAG_LOG_REPO_SYNC  - Set to 'true' to enable git sync (optional)")
+        exitProcess(1)
+    } catch (e: Exception) {
+        println("Error: ${e.message}")
+        exitProcess(1)
+    } finally {
+        stopKoin()
     }
 }
+
+data class ApplicationConfiguration(
+    val docsLocation: String,
+    val versionControlEnabled: Boolean,
+)
