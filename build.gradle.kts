@@ -24,7 +24,7 @@ dependencies {
     testImplementation("com.lemonappdev:konsist:0.17.3")
 
     testImplementation("com.willowtreeapps.assertk:assertk:0.28.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.11.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
     testImplementation("io.mockk:mockk:1.14.6")
 }
 
