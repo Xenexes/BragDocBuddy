@@ -21,7 +21,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Run tests
       run: ./gradlew test
@@ -42,7 +42,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Build fat JAR
       run: ./gradlew clean shadowJar
@@ -81,7 +81,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Build native image
       run: ./gradlew nativeCompile
@@ -119,7 +119,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/actions/setup-gradle@v5
 
     - name: Build fat JAR
       run: ./gradlew clean shadowJar
