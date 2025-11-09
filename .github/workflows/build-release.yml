@@ -48,7 +48,7 @@ jobs:
       run: ./gradlew clean shadowJar
 
     - name: Upload JAR artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: BragLogBuddy-jar
         path: build/libs/BragLogBuddy-*.jar
@@ -87,7 +87,7 @@ jobs:
       run: ./gradlew nativeCompile
 
     - name: Upload native executable
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.artifact-name }}
         path: build/native/nativeCompile/BragLogBuddy${{ matrix.executable-suffix }}
@@ -148,7 +148,7 @@ jobs:
           --copyright "2025 BragLogBuddy"
 
     - name: Upload installer
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.artifact-name }}
         path: dist/*
