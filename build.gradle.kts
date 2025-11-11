@@ -3,7 +3,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
     application
     id("com.gradleup.shadow") version "9.2.2"
-    id("org.graalvm.buildtools.native") version "0.11.2"
+    id("org.graalvm.buildtools.native") version "0.11.3"
 }
 
 group = "de.xenexes"
