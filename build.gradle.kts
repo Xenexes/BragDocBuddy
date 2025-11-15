@@ -98,10 +98,6 @@ tasks.jacocoTestReport {
     }
 }
 
-tasks.shadowJar {
-    minimize()
-}
-
 graalvmNative {
     binaries {
         named("main") {
