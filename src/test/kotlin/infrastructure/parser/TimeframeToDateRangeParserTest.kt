@@ -8,6 +8,7 @@ import assertk.assertions.isTrue
 import domain.Timeframe
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
 import java.time.LocalDate
 
@@ -143,5 +144,65 @@ class TimeframeToDateRangeParserTest {
         assertThat(result.start).isNotNull()
         assertThat(result.end).isNotNull()
         assertThat(result.start.isBefore(result.end) || result.start.isEqual(result.end)).isTrue()
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "QUARTER_ONE, 1, 1, 3, 31",
+        "QUARTER_TWO, 4, 1, 6, 30",
+        "QUARTER_THREE, 7, 1, 9, 30",
+        "QUARTER_FOUR, 10, 1, 12, 31",
+    )
+    fun `should parse quarters to correct date ranges`(
+        timeframe: Timeframe,
+        startMonth: Int,
+        startDay: Int,
+        endMonth: Int,
+        endDay: Int,
+    ) {
+        val currentYear =
+            java.time.Year
+                .now()
+                .value
+
+        val result = parser.parse(timeframe)
+
+        assertThat(result.start).isEqualTo(LocalDate.of(currentYear, startMonth, startDay))
+        assertThat(result.end).isEqualTo(LocalDate.of(currentYear, endMonth, endDay))
+    }
+
+    @Test
+    fun `should ensure quarters are exactly 3 months long`() {
+        val q1 = parser.parse(Timeframe.QUARTER_ONE)
+        val q2 = parser.parse(Timeframe.QUARTER_TWO)
+        val q3 = parser.parse(Timeframe.QUARTER_THREE)
+        val q4 = parser.parse(Timeframe.QUARTER_FOUR)
+
+        val q1Days = q1.end.toEpochDay() - q1.start.toEpochDay() + 1
+        assertThat(q1Days >= 90).isTrue()
+        assertThat(q1Days <= 91).isTrue()
+
+        val q2Days = q2.end.toEpochDay() - q2.start.toEpochDay() + 1
+        assertThat(q2Days).isEqualTo(91L)
+
+        val q3Days = q3.end.toEpochDay() - q3.start.toEpochDay() + 1
+        assertThat(q3Days).isEqualTo(92L)
+
+        val q4Days = q4.end.toEpochDay() - q4.start.toEpochDay() + 1
+        assertThat(q4Days).isEqualTo(92L)
+    }
+
+    @Test
+    fun `should ensure quarters cover entire year without gaps`() {
+        val q1 = parser.parse(Timeframe.QUARTER_ONE)
+        val q2 = parser.parse(Timeframe.QUARTER_TWO)
+        val q3 = parser.parse(Timeframe.QUARTER_THREE)
+        val q4 = parser.parse(Timeframe.QUARTER_FOUR)
+
+        assertThat(q2.start).isEqualTo(q1.end.plusDays(1))
+
+        assertThat(q3.start).isEqualTo(q2.end.plusDays(1))
+
+        assertThat(q4.start).isEqualTo(q3.end.plusDays(1))
     }
 }

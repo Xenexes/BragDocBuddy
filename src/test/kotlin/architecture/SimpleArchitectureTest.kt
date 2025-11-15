@@ -1,6 +1,7 @@
 package architecture
 
 import com.lemonappdev.konsist.api.Konsist
+import com.lemonappdev.konsist.api.ext.list.withNameEndingWith
 import com.lemonappdev.konsist.api.ext.list.withPackage
 import com.lemonappdev.konsist.api.ext.list.withText
 import com.lemonappdev.konsist.api.ext.list.withoutNameEndingWith
@@ -24,8 +25,9 @@ class SimpleArchitectureTest {
         Konsist
             .scopeFromProject()
             .classes()
-            .withPackage("..infrastructure.persistence..")
-            .assertTrue { it.name.endsWith("Repository") }
+            .withNameEndingWith("Repository")
+            .withoutNameEndingWith("Test")
+            .assertTrue { it.resideInPackage("..infrastructure.persistence..") }
     }
 
     @Test

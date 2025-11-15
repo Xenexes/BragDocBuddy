@@ -14,8 +14,8 @@ fun main(args: Array<String>) {
     } catch (e: ConfigurationException) {
         println("Configuration Error: ${e.message}")
         println("\nPlease ensure the following environment variables are set:")
-        println("  BRAG_LOG            - Path to your brag documents directory (required)")
-        println("  BRAG_LOG_REPO_SYNC  - Set to 'true' to enable git sync (optional)")
+        println("  BRAG_DOC            - Path to your brag documents directory (required)")
+        println("  BRAG_DOC_REPO_SYNC  - Set to 'true' to enable git sync (optional)")
         exitProcess(1)
     } catch (e: Exception) {
         println("Error: ${e.message}")

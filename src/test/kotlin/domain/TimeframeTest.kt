@@ -12,7 +12,7 @@ class TimeframeTest {
     fun `should have all expected timeframe values`() {
         val timeframes = Timeframe.entries.toTypedArray()
 
-        assertThat(timeframes.size).isEqualTo(5)
+        assertThat(timeframes.size).isEqualTo(9)
         assertThat(timeframes).isEqualTo(
             arrayOf(
                 Timeframe.TODAY,
@@ -20,6 +20,10 @@ class TimeframeTest {
                 Timeframe.LAST_WEEK,
                 Timeframe.LAST_MONTH,
                 Timeframe.LAST_YEAR,
+                Timeframe.QUARTER_ONE,
+                Timeframe.QUARTER_TWO,
+                Timeframe.QUARTER_THREE,
+                Timeframe.QUARTER_FOUR,
             ),
         )
     }
@@ -44,6 +48,22 @@ class TimeframeTest {
         "lastyear, LAST_YEAR",
         "LAST-YEAR, LAST_YEAR",
         "LASTYEAR, LAST_YEAR",
+        "quarter-one, QUARTER_ONE",
+        "quarterone, QUARTER_ONE",
+        "q1, QUARTER_ONE",
+        "Q1, QUARTER_ONE",
+        "quarter-two, QUARTER_TWO",
+        "quartertwo, QUARTER_TWO",
+        "q2, QUARTER_TWO",
+        "Q2, QUARTER_TWO",
+        "quarter-three, QUARTER_THREE",
+        "quarterthree, QUARTER_THREE",
+        "q3, QUARTER_THREE",
+        "Q3, QUARTER_THREE",
+        "quarter-four, QUARTER_FOUR",
+        "quarterfour, QUARTER_FOUR",
+        "q4, QUARTER_FOUR",
+        "Q4, QUARTER_FOUR",
     )
     fun `should parse valid timeframe strings case insensitively`(
         input: String,
@@ -101,6 +121,18 @@ class TimeframeTest {
                 "lastmonth" to Timeframe.LAST_MONTH,
                 "last-year" to Timeframe.LAST_YEAR,
                 "lastyear" to Timeframe.LAST_YEAR,
+                "quarter-one" to Timeframe.QUARTER_ONE,
+                "quarterone" to Timeframe.QUARTER_ONE,
+                "q1" to Timeframe.QUARTER_ONE,
+                "quarter-two" to Timeframe.QUARTER_TWO,
+                "quartertwo" to Timeframe.QUARTER_TWO,
+                "q2" to Timeframe.QUARTER_TWO,
+                "quarter-three" to Timeframe.QUARTER_THREE,
+                "quarterthree" to Timeframe.QUARTER_THREE,
+                "q3" to Timeframe.QUARTER_THREE,
+                "quarter-four" to Timeframe.QUARTER_FOUR,
+                "quarterfour" to Timeframe.QUARTER_FOUR,
+                "q4" to Timeframe.QUARTER_FOUR,
             )
 
         validInputs.forEach { (input, expected) ->

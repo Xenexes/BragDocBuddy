@@ -31,7 +31,7 @@ class AddBragUseCaseTest {
         val capturedMessage = slot<String>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(capture(capturedEntry)) } returns Unit
+        every { repository.save(capture(capturedEntry)) } returns true
         every { versionControl.commitAndPush(capture(capturedFile), capture(capturedMessage)) } returns true
 
         useCase.addBragEntry(content)
@@ -68,7 +68,7 @@ class AddBragUseCaseTest {
         val capturedMessage = slot<String>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(any()) } returns Unit
+        every { repository.save(any()) } returns true
         every { versionControl.commitAndPush(any(), capture(capturedMessage)) } returns true
 
         useCase.addBragEntry(longContent)
@@ -83,7 +83,7 @@ class AddBragUseCaseTest {
         val capturedMessage = slot<String>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(any()) } returns Unit
+        every { repository.save(any()) } returns true
         every { versionControl.commitAndPush(any(), capture(capturedMessage)) } returns true
 
         useCase.addBragEntry(shortContent)
@@ -98,7 +98,7 @@ class AddBragUseCaseTest {
         val capturedMessage = slot<String>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(any()) } returns Unit
+        every { repository.save(any()) } returns true
         every { versionControl.commitAndPush(any(), capture(capturedMessage)) } returns true
 
         useCase.addBragEntry(exactContent)
@@ -114,7 +114,7 @@ class AddBragUseCaseTest {
         val capturedMessage = slot<String>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(capture(capturedEntry)) } returns Unit
+        every { repository.save(capture(capturedEntry)) } returns true
         every { versionControl.commitAndPush(any(), capture(capturedMessage)) } returns true
 
         useCase.addBragEntry(emptyContent)
@@ -130,7 +130,7 @@ class AddBragUseCaseTest {
         val beforeTimestamp = LocalDateTime.now()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(capture(capturedEntry)) } returns Unit
+        every { repository.save(capture(capturedEntry)) } returns true
         every { versionControl.commitAndPush(any(), any()) } returns true
 
         useCase.addBragEntry(content)
@@ -147,7 +147,7 @@ class AddBragUseCaseTest {
         val capturedFile = slot<File>()
 
         every { repository.isInitialized() } returns true
-        every { repository.save(any()) } returns Unit
+        every { repository.save(any()) } returns true
         every { versionControl.commitAndPush(capture(capturedFile), any()) } returns true
 
         useCase.addBragEntry(content)

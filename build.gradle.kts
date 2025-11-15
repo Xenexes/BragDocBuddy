@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.2.21"
+    kotlin("plugin.serialization") version "2.2.21"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
     jacoco
     id("com.gradleup.shadow") version "9.2.2"
@@ -18,6 +19,13 @@ dependencies {
     implementation("io.insert-koin:koin-core:4.1.1")
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
 
+    implementation("io.ktor:ktor-client-core:3.3.2")
+    implementation("io.ktor:ktor-client-cio:3.3.2")
+    implementation("io.ktor:ktor-client-content-negotiation:3.3.2")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+
     testImplementation(kotlin("test"))
     testImplementation("io.insert-koin:koin-test:4.1.1")
     testImplementation("io.insert-koin:koin-test-junit5:4.1.1")
@@ -25,6 +33,7 @@ dependencies {
     testImplementation("com.willowtreeapps.assertk:assertk:0.28.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
     testImplementation("io.mockk:mockk:1.14.6")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
 tasks.test {

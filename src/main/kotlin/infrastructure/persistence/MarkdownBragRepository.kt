@@ -5,88 +5,58 @@ import domain.DateRange
 import io.github.oshai.kotlinlogging.KotlinLogging
 import ports.BragRepository
 import java.io.File
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class MarkdownBragRepository(
     private val docsLocation: String,
+    private val fileHandler: MarkdownBragFileHandler = MarkdownBragFileHandler(),
 ) : BragRepository {
     private val logger = KotlinLogging.logger {}
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-    private val bragFile: File
-        get() = File(docsLocation, "brags.md")
 
-    override fun save(entry: BragEntry) {
-        val dateStr = entry.date.format(dateFormatter)
-        val timeStr = entry.timestamp.format(timeFormatter)
+    private fun getBragFileForYear(year: Int): File = File(docsLocation, "brags-$year.md")
 
-        val content =
-            if (bragFile.exists()) {
-                val existing = bragFile.readText()
-                if (existing.contains("## $dateStr")) {
-                    "* $timeStr ${entry.content}\n"
-                } else {
-                    "\n## $dateStr\n* $timeStr ${entry.content}\n"
-                }
-            } else {
-                "# Brags\n\n## $dateStr\n* $timeStr ${entry.content}\n"
-            }
+    override fun save(entry: BragEntry): Boolean {
+        val year = entry.timestamp.year
+        val bragFile = getBragFileForYear(year)
+        val entriesByDate = fileHandler.parseAllEntries(bragFile).toMutableMap()
 
-        bragFile.appendText(content)
-        logger.debug { "Saved brag entry for $dateStr: ${entry.content}" }
+        val allExistingEntries = entriesByDate.values.flatten()
+        if (allExistingEntries.any { it.content == entry.content }) {
+            logger.debug { "Skipping duplicate entry: ${entry.content}" }
+            return false
+        }
+
+        val dateKey = entry.date
+        val existingEntries = entriesByDate.getOrDefault(dateKey, mutableListOf()).toMutableList()
+        existingEntries.add(entry)
+        entriesByDate[dateKey] = existingEntries
+
+        val content = fileHandler.formatEntries(year, entriesByDate)
+        bragFile.writeText(content)
+
+        logger.debug { "Saved brag entry for ${entry.date.format(dateFormatter)}: ${entry.content}" }
+        return true
     }
 
     override fun findByDateRange(range: DateRange): List<BragEntry> {
-        if (!bragFile.exists()) {
-            logger.debug { "Brag file does not exist: ${bragFile.absolutePath}" }
-            return emptyList()
-        }
+        val startYear = range.start.year
+        val endYear = range.end.year
+        val allEntries = mutableListOf<BragEntry>()
 
-        val entries = mutableListOf<BragEntry>()
-        val lines = bragFile.readLines()
-        var currentDate: LocalDate? = null
-
-        for (line in lines) {
-            when {
-                line.startsWith("## ") -> {
-                    val dateStr = line.substring(3).trim()
-                    currentDate =
-                        try {
-                            LocalDate.parse(dateStr, dateFormatter)
-                        } catch (e: Exception) {
-                            logger.warn { "Skipping malformed date header: '$dateStr'. Error: ${e.message}" }
-                            null
-                        }
-                }
-
-                line.startsWith("* ") && currentDate != null -> {
-                    if (range.contains(currentDate)) {
-                        val parts = line.substring(2).split(" ", limit = 2)
-                        if (parts.size == 2) {
-                            try {
-                                val time = parts[0]
-                                val content = parts[1]
-                                val timestamp =
-                                    LocalDateTime.parse(
-                                        "${currentDate}T$time",
-                                        DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-                                    )
-                                entries.add(BragEntry(timestamp, content))
-                            } catch (e: Exception) {
-                                logger.warn { "Skipping malformed entry on $currentDate: '$line'. Error: ${e.message}" }
-                            }
-                        } else {
-                            logger.warn { "Skipping entry with invalid format on $currentDate: '$line'" }
-                        }
-                    }
-                }
+        for (year in startYear..endYear) {
+            val bragFile = getBragFileForYear(year)
+            if (!bragFile.exists()) {
+                logger.debug { "Brag file does not exist: ${bragFile.absolutePath}" }
+                continue
             }
+
+            val entries = fileHandler.parseEntriesInRange(bragFile) { date -> range.contains(date) }
+            allEntries.addAll(entries)
         }
 
-        logger.debug { "Found ${entries.size} entries in date range ${range.start} to ${range.end}" }
-        return entries
+        logger.debug { "Found ${allEntries.size} entries in date range ${range.start} to ${range.end}" }
+        return allEntries.sortedBy { it.timestamp }
     }
 
     override fun isInitialized(): Boolean {
@@ -117,7 +87,7 @@ class MarkdownBragRepository(
             readmeFile.writeText(
                 """
                 # Bragging Document
-                
+
                 This is my bragging document where I keep track of my accomplishments.
 
                 The core problem it solves:
@@ -133,7 +103,7 @@ class MarkdownBragRepository(
                 * Record what you learned and skills you're developing
 
                 Don't oversell or undersell - just make your work sound exactly as good as it is.
-                
+
                 Inspired by [Julia Evans' blog post on brag documents](https://jvns.ca/blog/brag-documents/)
                 """.trimIndent(),
             )

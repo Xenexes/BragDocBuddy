@@ -4,7 +4,7 @@ import domain.BragEntry
 import domain.DateRange
 
 interface BragRepository {
-    fun save(entry: BragEntry)
+    fun save(entry: BragEntry): Boolean
 
     fun findByDateRange(range: DateRange): List<BragEntry> // Changed from BragEntry
 
