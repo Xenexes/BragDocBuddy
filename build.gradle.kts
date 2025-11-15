@@ -115,55 +115,8 @@ graalvmNative {
     }
 }
 
-tasks.register<Exec>("createInstaller") {
-    group = "distribution"
-    description = "Creates a platform-specific installer using jpackage"
-    dependsOn("shadowJar")
-
-    doFirst {
-        val distDir = File(project.projectDir, "dist")
-        distDir.mkdirs()
-
-        val os = System.getProperty("os.name").lowercase()
-        val installerType =
-            when {
-                os.contains("windows") -> "exe"
-                os.contains("mac") -> "pkg"
-                else -> "deb"
-            }
-
-        commandLine(
-            "jpackage",
-            "--input",
-            "build/libs",
-            "--name",
-            "BragDocBuddy",
-            "--main-jar",
-            "BragDocBuddy-${project.version}.jar",
-            "--main-class",
-            "MainKt",
-            "--dest",
-            "dist",
-            "--type",
-            installerType,
-            "--app-version",
-            project.version.toString(),
-            "--description",
-            "A command line tool to write a brag document",
-            "--vendor",
-            "BragDocBuddy",
-            "--copyright",
-            "2025 Matthias Kurth",
-        )
-    }
-
-    doLast {
-        println("Installer created in dist/ directory")
-    }
-}
-
 tasks.register("dist") {
     group = "distribution"
-    description = "Creates all distribution artifacts"
-    dependsOn("shadowJar", "nativeCompile", "createInstaller")
+    description = "Creates all distribution artifacts (fat jar and native binary)"
+    dependsOn("shadowJar", "nativeCompile")
 }
