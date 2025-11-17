@@ -5,6 +5,7 @@ plugins {
     jacoco
     id("com.gradleup.shadow") version "9.2.2"
     id("org.graalvm.buildtools.native") version "0.11.3"
+    `jvm-test-suite`
 }
 
 group = "de.xenexes"
@@ -29,7 +30,6 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.insert-koin:koin-test:4.1.1")
     testImplementation("io.insert-koin:koin-test-junit5:4.1.1")
-    testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("com.willowtreeapps.assertk:assertk:0.28.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
     testImplementation("io.mockk:mockk:1.14.6")
@@ -38,6 +38,31 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class)
+
+        register<JvmTestSuite>("konsistTest") {
+            dependencies {
+                implementation(project())
+                implementation("com.lemonappdev:konsist:0.17.3")
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(testing.suites.named("konsistTest"))
 }
 
 kotlin {
