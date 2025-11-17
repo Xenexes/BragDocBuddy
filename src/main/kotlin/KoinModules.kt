@@ -4,6 +4,8 @@ import infrastructure.github.GitHubConfiguration
 import infrastructure.github.KtorGitHubClient
 import infrastructure.input.ConsoleUserInput
 import infrastructure.jira.JiraConfiguration
+import infrastructure.jira.JiraIssueFilter
+import infrastructure.jira.JiraQueryBuilder
 import infrastructure.jira.KtorJiraClient
 import infrastructure.parser.TimeframeToDateRangeParser
 import infrastructure.persistence.MarkdownBragRepository
@@ -107,7 +109,11 @@ val infrastructureModule =
         }
 
         single<JiraClient> {
-            KtorJiraClient(get())
+            KtorJiraClient(
+                configuration = get(),
+                queryBuilder = JiraQueryBuilder,
+                issueFilter = JiraIssueFilter,
+            )
         }
 
         single<UserInput> {
