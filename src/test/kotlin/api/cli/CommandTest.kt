@@ -1,5 +1,10 @@
 package api.cli
 
+import api.cli.commands.AddCommand
+import api.cli.commands.InitCommand
+import api.cli.commands.ReviewCommand
+import api.cli.commands.VersionCommand
+import api.cli.presenters.BragPresenter
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isTrue
@@ -40,7 +45,7 @@ class CommandTest {
     fun `InitCommand should execute successfully`() {
         val useCase = mockk<InitRepositoryUseCase>()
         justRun { useCase.initRepository() }
-        val command = Command.InitCommand(useCase)
+        val command = InitCommand(useCase)
 
         command.execute()
 
@@ -53,7 +58,7 @@ class CommandTest {
         val useCase = mockk<AddBragUseCase>()
         val content = "Completed feature implementation"
         justRun { useCase.addBragEntry(content) }
-        val command = Command.AddCommand(useCase, content)
+        val command = AddCommand(useCase, content)
 
         command.execute()
 
@@ -65,7 +70,7 @@ class CommandTest {
     fun `VersionCommand should execute successfully`() {
         val versionChecker = mockk<VersionChecker>()
         justRun { versionChecker.checkForUpdates() }
-        val command = Command.VersionCommand(versionChecker)
+        val command = VersionCommand(versionChecker)
 
         command.execute()
 
@@ -75,7 +80,7 @@ class CommandTest {
     @Test
     fun `ReviewCommand should execute successfully with entries`() {
         val useCase = mockk<GetBragsUseCase>()
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val timeframe = Timeframe.TODAY
         val entries =
             mapOf(
@@ -87,7 +92,7 @@ class CommandTest {
             )
 
         every { useCase.getBrags(timeframe) } returns entries
-        val command = Command.ReviewCommand(useCase, timeframe, presenter)
+        val command = ReviewCommand(useCase, timeframe, presenter)
 
         command.execute()
 
@@ -101,12 +106,12 @@ class CommandTest {
     @Test
     fun `ReviewCommand should handle empty results`() {
         val useCase = mockk<GetBragsUseCase>()
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val timeframe = Timeframe.YESTERDAY
         val emptyEntries = emptyMap<String, List<BragEntry>>()
 
         every { useCase.getBrags(timeframe) } returns emptyEntries
-        val command = Command.ReviewCommand(useCase, timeframe, presenter)
+        val command = ReviewCommand(useCase, timeframe, presenter)
 
         command.execute()
 
@@ -116,7 +121,7 @@ class CommandTest {
 
     @Test
     fun `BragPresenter should format entries correctly`() {
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val entries =
             mapOf(
                 "2025-01-15" to
@@ -142,7 +147,7 @@ class CommandTest {
 
     @Test
     fun `BragPresenter should handle empty entries`() {
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val emptyEntries = emptyMap<String, List<BragEntry>>()
 
         presenter.present(emptyEntries)
@@ -152,7 +157,7 @@ class CommandTest {
 
     @Test
     fun `BragPresenter should format time correctly`() {
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val entries =
             mapOf(
                 "2025-01-15" to
@@ -173,7 +178,7 @@ class CommandTest {
 
     @Test
     fun `BragPresenter should handle single entry correctly`() {
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val entries =
             mapOf(
                 "2025-01-15" to
@@ -191,7 +196,7 @@ class CommandTest {
 
     @Test
     fun `BragPresenter should preserve entry order`() {
-        val presenter = Command.BragPresenter()
+        val presenter = BragPresenter()
         val entries =
             mapOf(
                 "2025-01-15" to

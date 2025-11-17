@@ -1,5 +1,15 @@
 package api.cli
 
+import api.cli.commands.AddCommand
+import api.cli.commands.Command
+import api.cli.commands.InitCommand
+import api.cli.commands.ReviewCommand
+import api.cli.commands.SyncJiraIssuesCommand
+import api.cli.commands.SyncPullRequestsCommand
+import api.cli.commands.VersionCommand
+import api.cli.presenters.BragPresenter
+import api.cli.presenters.JiraIssueSyncPresenter
+import api.cli.presenters.PullRequestSyncPresenter
 import domain.Timeframe
 import infrastructure.version.VersionChecker
 import org.koin.core.component.KoinComponent
@@ -20,9 +30,9 @@ class BragCliApplication : KoinComponent {
     private val syncJiraIssuesUseCase: SyncJiraIssuesUseCase by inject()
     private val versionChecker: VersionChecker by inject()
     private val userInput: UserInput by inject()
-    private val bragPresenter = Command.BragPresenter()
-    private val prSyncPresenter = Command.PullRequestSyncPresenter()
-    private val jiraSyncPresenter = Command.JiraIssueSyncPresenter()
+    private val bragPresenter = BragPresenter()
+    private val prSyncPresenter = PullRequestSyncPresenter()
+    private val jiraSyncPresenter = JiraIssueSyncPresenter()
 
     fun run(args: Array<String>) {
         val command = parseCommand(args)
@@ -36,11 +46,11 @@ class BragCliApplication : KoinComponent {
             }
 
             args[0] == "init" -> {
-                Command.InitCommand(initRepositoryUseCase)
+                InitCommand(initRepositoryUseCase)
             }
 
             args[0] == "version" -> {
-                Command.VersionCommand(versionChecker)
+                VersionCommand(versionChecker)
             }
 
             args[0] == "about" && args.size > 1 -> {
@@ -50,7 +60,7 @@ class BragCliApplication : KoinComponent {
                         println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
                         exitProcess(1)
                     }
-                Command.ReviewCommand(getBragsUseCase, timeframe, bragPresenter)
+                ReviewCommand(getBragsUseCase, timeframe, bragPresenter)
             }
 
             args[0] == "sync-prs" && args.size > 1 -> {
@@ -61,7 +71,7 @@ class BragCliApplication : KoinComponent {
                         exitProcess(1)
                     }
                 val printOnly = args.contains("--print-only")
-                Command.SyncPullRequestsCommand(syncPullRequestsUseCase, timeframe, printOnly, prSyncPresenter)
+                SyncPullRequestsCommand(syncPullRequestsUseCase, timeframe, printOnly, prSyncPresenter)
             }
 
             args[0] == "sync-jira" && args.size > 1 -> {
@@ -72,7 +82,7 @@ class BragCliApplication : KoinComponent {
                         exitProcess(1)
                     }
                 val printOnly = args.contains("--print-only")
-                Command.SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframe, printOnly, jiraSyncPresenter, userInput)
+                SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframe, printOnly, jiraSyncPresenter, userInput)
             }
 
             args.contains("-c") || args.contains("--comment") -> {
@@ -85,7 +95,7 @@ class BragCliApplication : KoinComponent {
 
                 if (commentIndex + 1 < args.size) {
                     val comment = args.slice(commentIndex + 1 until args.size).joinToString(" ")
-                    Command.AddCommand(addBragUseCase, comment)
+                    AddCommand(addBragUseCase, comment)
                 } else {
                     println("Error: No comment provided")
                     exitProcess(1)
