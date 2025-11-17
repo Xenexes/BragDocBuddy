@@ -36,7 +36,6 @@ jobs:
       contents: write  # Required to push initial tag if needed
     outputs:
       version: ${{ steps.version_output.outputs.version }}
-      version_tag: ${{ steps.version_output.outputs.version_tag }}
       version_changed: ${{ steps.check_version.outputs.changed }}
     steps:
     - name: Checkout code
