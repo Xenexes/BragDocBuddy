@@ -137,9 +137,11 @@ graalvmNative {
         named("main") {
             imageName.set("BragDocBuddy")
             mainClass.set("MainKt")
+
             buildArgs.addAll(
                 "--no-fallback",
                 "--install-exit-handlers",
+                "--initialize-at-build-time=kotlin.DeprecationLevel",
             )
         }
     }
