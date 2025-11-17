@@ -146,6 +146,7 @@ graalvmNative {
                 "--no-fallback",
                 "--install-exit-handlers",
                 "--initialize-at-build-time=kotlin.DeprecationLevel",
+                "-H:ReflectionConfigurationFiles=$projectDir/src/main/resources/reflection-config.json",
             )
         }
     }

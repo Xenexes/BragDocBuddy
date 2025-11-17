@@ -7,18 +7,13 @@ import infrastructure.github.dto.GitHubPullRequestDto
 import infrastructure.github.dto.GitHubSearchResponseDto
 import infrastructure.http.HttpClientFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
-import io.ktor.http.headers
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import ports.GitHubClient
 import java.time.Instant
@@ -29,7 +24,7 @@ private val logger = KotlinLogging.logger {}
 
 class KtorGitHubClient(
     private val configuration: GitHubConfiguration,
-    private val httpClientFactory: HttpClientFactory,
+    httpClientFactory: HttpClientFactory,
 ) : GitHubClient {
     companion object {
         private const val GITHUB_API_PAGE_SIZE = 100
@@ -38,7 +33,7 @@ class KtorGitHubClient(
         private const val GITHUB_API_BASE_URL = "https://api.github.com"
     }
 
-    private val client = HttpClientFactory.create()
+    private val client = httpClientFactory.create()
 
     override suspend fun fetchMergedPullRequests(
         organization: String,

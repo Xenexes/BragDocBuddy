@@ -1,0 +1,138 @@
+[
+  {
+    "name": "infrastructure.jira.dto.JiraChangelogDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraChangelogDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraErrorDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraErrorDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraFieldsDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraFieldsDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraHistoryDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraHistoryDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraHistoryItemDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraHistoryItemDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraIssueDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraIssueDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraIssueTypeDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraIssueTypeDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraPriorityDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraPriorityDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraResolutionDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraResolutionDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraSearchJqlResponseDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraSearchJqlResponseDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraStatusDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraStatusDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraUserDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.jira.dto.JiraUserDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubErrorDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubErrorDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubPullRequestDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubPullRequestDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubSearchResponseDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubSearchResponseDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubUserDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.github.dto.GitHubUserDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.github.dto.PullRequestRefDto",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.github.dto.PullRequestRefDto$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  }
+]
