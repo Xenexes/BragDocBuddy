@@ -2,6 +2,7 @@ import infrastructure.git.GitVersionControl
 import infrastructure.git.NoOpVersionControl
 import infrastructure.github.GitHubConfiguration
 import infrastructure.github.KtorGitHubClient
+import infrastructure.http.HttpClientFactory
 import infrastructure.input.ConsoleUserInput
 import infrastructure.jira.JiraConfiguration
 import infrastructure.jira.JiraIssueFilter
@@ -105,11 +106,15 @@ val infrastructureModule =
         }
 
         single<GitHubClient> {
-            KtorGitHubClient(get())
+            KtorGitHubClient(
+                configuration = get(),
+                httpClientFactory = HttpClientFactory,
+            )
         }
 
         single<JiraClient> {
             KtorJiraClient(
+                httpClientFactory = HttpClientFactory,
                 configuration = get(),
                 queryBuilder = JiraQueryBuilder,
                 issueFilter = JiraIssueFilter,

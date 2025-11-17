@@ -21,7 +21,7 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
 
     implementation("io.ktor:ktor-client-core:3.3.2")
-    implementation("io.ktor:ktor-client-cio:3.3.2")
+    implementation("io.ktor:ktor-client-okhttp:3.3.2")
     implementation("io.ktor:ktor-client-content-negotiation:3.3.2")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
@@ -63,6 +63,10 @@ testing {
 
 tasks.named("check") {
     dependsOn(testing.suites.named("konsistTest"))
+}
+
+tasks.named("konsistTest") {
+    mustRunAfter("shadowJar")
 }
 
 kotlin {

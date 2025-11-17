@@ -2,6 +2,7 @@ package infrastructure.jira
 
 import domain.DateRange
 import domain.JiraIssue
+import infrastructure.http.HttpClientFactory
 import infrastructure.jira.dto.JiraErrorDto
 import infrastructure.jira.dto.JiraIssueDto
 import infrastructure.jira.dto.JiraSearchJqlResponseDto
@@ -9,7 +10,7 @@ import infrastructure.jira.dto.JiraUserDto
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
@@ -25,6 +26,7 @@ import java.util.Base64
 private val logger = KotlinLogging.logger {}
 
 class KtorJiraClient(
+    private val httpClientFactory: HttpClientFactory,
     private val configuration: JiraConfiguration,
     private val queryBuilder: JiraQueryBuilder,
     private val issueFilter: JiraIssueFilter,
@@ -33,17 +35,7 @@ class KtorJiraClient(
         private const val JIRA_API_PAGE_SIZE = 50
     }
 
-    private val client =
-        HttpClient(CIO) {
-            install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                    },
-                )
-            }
-        }
+    private val client = HttpClientFactory.create()
 
     private suspend fun getUserAccountId(
         email: String,
