@@ -4,9 +4,11 @@ import domain.Timeframe
 import infrastructure.version.VersionChecker
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import ports.UserInput
 import usecases.AddBragUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
+import usecases.SyncJiraIssuesUseCase
 import usecases.SyncPullRequestsUseCase
 import kotlin.system.exitProcess
 
@@ -15,10 +17,12 @@ class BragCliApplication : KoinComponent {
     private val addBragUseCase: AddBragUseCase by inject()
     private val getBragsUseCase: GetBragsUseCase by inject()
     private val syncPullRequestsUseCase: SyncPullRequestsUseCase by inject()
+    private val syncJiraIssuesUseCase: SyncJiraIssuesUseCase by inject()
     private val versionChecker: VersionChecker by inject()
     private val userInput: UserInput by inject()
     private val bragPresenter = Command.BragPresenter()
     private val prSyncPresenter = Command.PullRequestSyncPresenter()
+    private val jiraSyncPresenter = Command.JiraIssueSyncPresenter()
 
     fun run(args: Array<String>) {
         val command = parseCommand(args)
@@ -60,6 +64,17 @@ class BragCliApplication : KoinComponent {
                 Command.SyncPullRequestsCommand(syncPullRequestsUseCase, timeframe, printOnly, prSyncPresenter)
             }
 
+            args[0] == "sync-jira" && args.size > 1 -> {
+                val timeframe =
+                    Timeframe.fromString(args[1]) ?: run {
+                        println("Error: Unknown timeframe: ${args[1]}")
+                        println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
+                        exitProcess(1)
+                    }
+                val printOnly = args.contains("--print-only")
+                Command.SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframe, printOnly, jiraSyncPresenter, userInput)
+            }
+
             args.contains("-c") || args.contains("--comment") -> {
                 val commentIndex =
                     if (args.contains("-c")) {
@@ -88,25 +103,29 @@ class BragCliApplication : KoinComponent {
             BragDocBuddy - A CLI tool for maintaining a "brag doc document" - your personal record of professional accomplishments.
 
             Usage:
-                BragDocBuddy init                                 Initialize bragging document directory
-                BragDocBuddy -c "YOUR TEXT HERE"                  Add a new brag entry
-                BragDocBuddy --comment "YOUR TEXT HERE"           Add a new brag entry
-                BragDocBuddy about <timeframe>                    Review brags from a time period
-                BragDocBuddy sync-prs <timeframe> [--print-only]  Sync merged PRs from GitHub
-                BragDocBuddy version                              Show current version and check for updates
+                BragDocBuddy init                                    Initialize bragging document directory
+                BragDocBuddy -c "YOUR TEXT HERE"                     Add a new brag entry
+                BragDocBuddy --comment "YOUR TEXT HERE"              Add a new brag entry
+                BragDocBuddy about <timeframe>                       Review brags from a time period
+                BragDocBuddy sync-prs <timeframe> [--print-only]    Sync merged PRs from GitHub
+                BragDocBuddy sync-jira <timeframe> [--print-only]   Sync resolved Jira issues
+                BragDocBuddy version                                 Show current version and check for updates
 
             Timeframes:
                 today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4
 
             Environment Variables:
-                BRAG_DOC            Location of bragging document directory
-                BRAG_DOC_REPO_SYNC  Set to 'true' to automatically commit and push to git
                 BRAG_DOC                          Location of bragging document directory
                 BRAG_DOC_REPO_SYNC                Set to 'true' to automatically commit and push to git
                 BRAG_DOC_GITHUB_PR_SYNC_ENABLED   Set to 'false' to disable GitHub PR sync (default: true)
                 BRAG_DOC_GITHUB_TOKEN             GitHub personal access token (or use 'gh auth login')
                 BRAG_DOC_GITHUB_USERNAME          Your GitHub username
                 BRAG_DOC_GITHUB_ORG               GitHub organization name
+                BRAG_DOC_JIRA_SYNC_ENABLED        Set to 'false' to disable Jira issue sync (default: true)
+                BRAG_DOC_JIRA_URL                 Jira URL (e.g., https://your-company.atlassian.net)
+                BRAG_DOC_JIRA_EMAIL               Your Jira email address
+                BRAG_DOC_JIRA_API_TOKEN           Jira API token
+                BRAG_DOC_JIRA_JQL_TEMPLATE        Custom JQL template with {email}, {startDate}, {endDate} placeholders
             """.trimIndent(),
         )
         exitProcess(0)

@@ -2,6 +2,9 @@ import infrastructure.git.GitVersionControl
 import infrastructure.git.NoOpVersionControl
 import infrastructure.github.GitHubConfiguration
 import infrastructure.github.KtorGitHubClient
+import infrastructure.input.ConsoleUserInput
+import infrastructure.jira.JiraConfiguration
+import infrastructure.jira.KtorJiraClient
 import infrastructure.parser.TimeframeToDateRangeParser
 import infrastructure.persistence.MarkdownBragRepository
 import infrastructure.version.CurrentVersionProvider
@@ -11,11 +14,14 @@ import infrastructure.version.VersionChecker
 import org.koin.dsl.module
 import ports.BragRepository
 import ports.GitHubClient
+import ports.JiraClient
 import ports.TimeframeParser
+import ports.UserInput
 import ports.VersionControl
 import usecases.AddBragUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
+import usecases.SyncJiraIssuesUseCase
 import usecases.SyncPullRequestsUseCase
 
 val configurationModule =
@@ -45,6 +51,23 @@ val configurationModule =
                 token = token,
                 username = username,
                 organization = organization,
+            )
+        }
+
+        single<JiraConfiguration> {
+            val enabled = System.getenv("BRAG_DOC_JIRA_SYNC_ENABLED")?.lowercase() != "false"
+
+            val url = System.getenv("BRAG_DOC_JIRA_URL")
+            val email = System.getenv("BRAG_DOC_JIRA_EMAIL")
+            val apiToken = System.getenv("BRAG_DOC_JIRA_API_TOKEN")
+            val jqlTemplate = System.getenv("BRAG_DOC_JIRA_JQL_TEMPLATE")
+
+            JiraConfiguration(
+                enabled = enabled,
+                url = url,
+                email = email,
+                apiToken = apiToken,
+                jqlTemplate = jqlTemplate ?: JiraConfiguration.DEFAULT_JQL_TEMPLATE,
             )
         }
     }
@@ -82,6 +105,14 @@ val infrastructureModule =
         single<GitHubClient> {
             KtorGitHubClient(get())
         }
+
+        single<JiraClient> {
+            KtorJiraClient(get())
+        }
+
+        single<UserInput> {
+            ConsoleUserInput()
+        }
     }
 
 val useCaseModule =
@@ -111,6 +142,15 @@ val useCaseModule =
                 bragRepository = get(),
                 timeframeParser = get(),
                 gitHubConfig = get(),
+            )
+        }
+
+        single<SyncJiraIssuesUseCase> {
+            SyncJiraIssuesUseCase(
+                jiraClient = get(),
+                bragRepository = get(),
+                timeframeParser = get(),
+                jiraConfig = get(),
             )
         }
     }
