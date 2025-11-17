@@ -7,6 +7,7 @@ import domain.PullRequest
 import domain.PullRequestSyncResult
 import domain.Timeframe
 import infrastructure.version.VersionChecker
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import ports.UserInput
 import usecases.AddBragUseCase
@@ -23,12 +24,17 @@ sealed interface Command {
     class InitCommand(
         private val useCase: InitRepositoryUseCase,
     ) : Command {
+        private val logger = KotlinLogging.logger {}
+
         override fun execute() {
             try {
+                logger.info { "Initializing repository" }
                 useCase.initRepository()
                 println("Initialized bragging document directory")
+                logger.info { "Repository initialized successfully" }
             } catch (e: IllegalStateException) {
-                println("Error: ${e.message}")
+                logger.error(e) { "Failed to initialize repository: ${e.message}" }
+                System.err.println("Error: ${e.message}")
                 exitProcess(1)
             }
         }
@@ -38,12 +44,17 @@ sealed interface Command {
         private val useCase: AddBragUseCase,
         private val content: String,
     ) : Command {
+        private val logger = KotlinLogging.logger {}
+
         override fun execute() {
             try {
+                logger.info { "Adding brag entry" }
                 useCase.addBragEntry(content)
                 println("Added brag: $content")
+                logger.info { "Brag entry added successfully" }
             } catch (e: IllegalStateException) {
-                println("Error: ${e.message}")
+                logger.error(e) { "Failed to add brag entry: ${e.message}" }
+                System.err.println("Error: ${e.message}")
                 exitProcess(1)
             }
         }
@@ -54,12 +65,17 @@ sealed interface Command {
         private val timeframe: Timeframe,
         private val presenter: BragPresenter,
     ) : Command {
+        private val logger = KotlinLogging.logger {}
+
         override fun execute() {
             try {
+                logger.info { "Retrieving brags for timeframe: $timeframe" }
                 val brags = useCase.getBrags(timeframe)
+                logger.info { "Found ${brags.values.sumOf { it.size }} brag entries" }
                 presenter.present(brags)
             } catch (e: IllegalStateException) {
-                println("Error: ${e.message}")
+                logger.error(e) { "Failed to retrieve brags: ${e.message}" }
+                System.err.println("Error: ${e.message}")
                 exitProcess(1)
             }
         }
@@ -79,13 +95,18 @@ sealed interface Command {
         private val printOnly: Boolean,
         private val presenter: PullRequestSyncPresenter,
     ) : Command {
+        private val logger = KotlinLogging.logger {}
+
         override fun execute() {
             runBlocking {
                 try {
+                    logger.info { "Executing sync pull requests command (timeframe: $timeframe, printOnly: $printOnly)" }
                     val result = useCase.syncPullRequests(timeframe, printOnly)
                     presenter.present(result)
+                    logger.info { "Pull requests sync command completed successfully" }
                 } catch (e: IllegalStateException) {
-                    println("Error: ${e.message}")
+                    logger.error(e) { "Failed to sync pull requests: ${e.message}" }
+                    System.err.println("Error: ${e.message}")
                     exitProcess(1)
                 }
             }
@@ -99,21 +120,28 @@ sealed interface Command {
         private val presenter: JiraIssueSyncPresenter,
         private val userInput: UserInput,
     ) : Command {
+        private val logger = KotlinLogging.logger {}
+
         override fun execute() {
             runBlocking {
                 try {
+                    logger.info { "Executing sync Jira issues command (timeframe: $timeframe, printOnly: $printOnly)" }
                     val result = useCase.syncJiraIssues(timeframe, printOnly)
                     when (result) {
                         is JiraIssueSyncResult.ReadyToSync -> {
+                            logger.info { "Ready to sync ${result.issues.size} Jira issues, waiting for user selection" }
                             presenter.presentInteractive(result.issues, userInput) { selectedIssues ->
+                                logger.info { "User selected ${selectedIssues.size} issues to sync" }
                                 val syncResult = useCase.syncSelectedIssues(selectedIssues)
                                 presenter.presentSyncResult(syncResult)
                             }
                         }
                         else -> presenter.present(result)
                     }
+                    logger.info { "Jira issues sync command completed successfully" }
                 } catch (e: IllegalStateException) {
-                    println("Error: ${e.message}")
+                    logger.error(e) { "Failed to sync Jira issues: ${e.message}" }
+                    System.err.println("Error: ${e.message}")
                     exitProcess(1)
                 }
             }
