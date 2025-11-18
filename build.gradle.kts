@@ -36,6 +36,90 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        freeCompilerArgs.add("-Xjsr305=strict")
+        freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
+    }
+
+    sourceSets {
+        main {
+            kotlin.srcDir("build/generated/sources/version/kotlin")
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+tasks.register("generateVersionPropertiesAndConstant") {
+    group = "build"
+    description = "Generates version.properties file and Version.kt constant"
+
+    val resourcesOutputDir =
+        layout.buildDirectory
+            .dir("resources/main")
+            .get()
+            .asFile
+    val kotlinOutputDir =
+        layout.buildDirectory
+            .dir("generated/sources/version/kotlin/infrastructure/version")
+            .get()
+            .asFile
+
+    outputs.dir(resourcesOutputDir)
+    outputs.dir(kotlinOutputDir)
+
+    doLast {
+        // Generate version.properties for JAR builds
+        resourcesOutputDir.mkdirs()
+        File(resourcesOutputDir, "version.properties").writeText("version=${project.version}\n")
+        println("Generated version.properties with version: ${project.version}")
+
+        // Generate Version.kt for compile-time constant (works in native images)
+        kotlinOutputDir.mkdirs()
+        File(kotlinOutputDir, "Version.kt").writeText(
+            """
+            |package infrastructure.version
+            |
+            |object Version {
+            |    const val VERSION = "${project.version}"
+            |}
+            |
+            """.trimMargin(),
+        )
+        println("Generated Version.kt with version: ${project.version}")
+    }
+}
+
+tasks.named("compileKotlin") {
+    dependsOn("generateVersionPropertiesAndConstant")
+}
+
+tasks.named("processResources") {
+    dependsOn("generateVersionPropertiesAndConstant")
+}
+
+tasks.named("nativeCompile") {
+    dependsOn("generateVersionPropertiesAndConstant")
+}
+
+tasks.matching { it.name.startsWith("runKtlint") || it.name == "ktlintFormat" }.configureEach {
+    dependsOn("generateVersionPropertiesAndConstant")
+}
+
+ktlint {
+    filter {
+        exclude("**/generated/**")
+        exclude("build/generated/**")
+    }
+    version.set("1.7.1")
+}
+
 tasks.test {
     useJUnitPlatform()
 }
@@ -67,50 +151,6 @@ tasks.named("check") {
 
 tasks.named("konsistTest") {
     mustRunAfter("shadowJar")
-}
-
-kotlin {
-    jvmToolchain(21)
-    compilerOptions {
-        freeCompilerArgs.add("-Xjsr305=strict")
-        freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
-    }
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
-}
-
-tasks.register("generateVersionProperties") {
-    group = "build"
-    description = "Generates version.properties file with current version"
-
-    val outputDir =
-        layout.buildDirectory
-            .dir("resources/main")
-            .get()
-            .asFile
-    outputs.dir(outputDir)
-
-    doLast {
-        outputDir.mkdirs()
-        val versionFile = File(outputDir, "version.properties")
-        versionFile.writeText("version=${project.version}\n")
-        println("Generated version.properties with version: ${project.version}")
-    }
-}
-
-tasks.named("processResources") {
-    dependsOn("generateVersionProperties")
-}
-
-ktlint {
-    filter {
-        exclude("**/generated/**")
-    }
-    version.set("1.7.1")
 }
 
 tasks.shadowJar {

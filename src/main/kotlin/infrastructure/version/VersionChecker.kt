@@ -152,18 +152,22 @@ interface CurrentVersionProvider {
 class PropertiesVersionProvider : CurrentVersionProvider {
     override fun getCurrentVersion(): String =
         try {
-            val properties = Properties()
-            val versionFile = this::class.java.classLoader.getResourceAsStream("version.properties")
+            Version.VERSION
+        } catch (e: Exception) {
+            try {
+                val properties = Properties()
+                val versionFile = this::class.java.classLoader.getResourceAsStream("version.properties")
 
-            if (versionFile != null) {
-                properties.load(versionFile)
-                properties.getProperty("version", "unknown")
-            } else {
+                if (versionFile != null) {
+                    properties.load(versionFile)
+                    properties.getProperty("version", "unknown")
+                } else {
+                    "unknown"
+                }
+            } catch (e2: Exception) {
+                logger.debug(e2) { "Failed to load version from properties" }
                 "unknown"
             }
-        } catch (e: Exception) {
-            logger.debug(e) { "Failed to load version from properties" }
-            "unknown"
         }
 }
 
