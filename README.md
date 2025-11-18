@@ -33,8 +33,24 @@ Inspired by [Julia Evans' blog post on brag documents](https://jvns.ca/blog/brag
 
 ## Download/Update
 
+**Get latest version and download macOS:**
 ```shell
-curl -L https://github.com/Xenexes/BragDocBuddy/releases/download/v1.0.0/BragDocBuddy-macos > /Applications
+
+LATEST_VERSION=$(curl -s https://api.github.com/repos/Xenexes/BragDocBuddy/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+curl -L https://github.com/Xenexes/BragDocBuddy/releases/download/${LATEST_VERSION}/BragDocBuddy-macos -o /Applications/BragDocBuddy && chmod +x /Applications/BragDocBuddy
+```
+
+**Get latest version and download linux:**
+```shell
+LATEST_VERSION=$(curl -s https://api.github.com/repos/Xenexes/BragDocBuddy/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+curl -L https://github.com/Xenexes/BragDocBuddy/releases/download/${LATEST_VERSION}/BragDocBuddy-linux -o ~/BragDocBuddy && chmod +x ~/BragDocBuddy
+```
+
+**Get latest version and download windows:**
+```powershell
+$response = Invoke-RestMethod -Uri "https://api.github.com/repos/Xenexes/BragDocBuddy/releases/latest"
+$latestVersion = $response.tag_name
+Invoke-WebRequest -Uri "https://github.com/Xenexes/BragDocBuddy/releases/download/${latestVersion}/BragDocBuddy-windows.exe" -OutFile "BragDocBuddy.exe"
 ```
 
 ## Setup

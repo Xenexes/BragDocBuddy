@@ -409,22 +409,18 @@ jobs:
 
           ### Download and Update
 
+          **macOS:**
+          ```shell
+          curl -L https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-macos -o /Applications/BragDocBuddy && chmod +x /Applications/BragDocBuddy
+          ```
+          
           **Linux:**
-          ```bash
-          curl -LO https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-linux
-          chmod +x BragDocBuddy-linux
+          ```shell
+          curl -L https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-linux -o ~/BragDocBuddy && chmod +x ~/BragDocBuddy
           ./BragDocBuddy-linux
           ```
-
-          **macOS:**
-          ```bash
-          curl -LO https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-macos
-          chmod +x BragDocBuddy-macos
-          ./BragDocBuddy-macos
-          ```
-
+          
           **Windows (PowerShell):**
           ```powershell
           Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-windows.exe" -OutFile "BragDocBuddy.exe"
-          .\BragDocBuddy.exe
           ```
