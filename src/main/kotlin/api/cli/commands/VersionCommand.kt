@@ -1,6 +1,6 @@
 package api.cli.commands
 
-import infrastructure.version.VersionChecker
+import ports.VersionChecker
 
 class VersionCommand(
     private val versionChecker: VersionChecker,

@@ -1,6 +1,8 @@
 package infrastructure.version
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import ports.CurrentVersionProvider
+import ports.VersionChecker
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
@@ -10,10 +12,6 @@ import java.time.Duration
 import java.util.Properties
 
 private val logger = KotlinLogging.logger {}
-
-interface VersionChecker {
-    fun checkForUpdates()
-}
 
 class GitHubVersionChecker(
     private val currentVersionProvider: CurrentVersionProvider,
@@ -143,10 +141,7 @@ class GitHubVersionChecker(
         val extraPadding = if ((width - text.length) % 2 != 0) 1 else 0
         return " ".repeat(padding) + text + " ".repeat(padding + extraPadding)
     }
-}
 
-interface CurrentVersionProvider {
-    fun getCurrentVersion(): String
 }
 
 class PropertiesVersionProvider : CurrentVersionProvider {

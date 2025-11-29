@@ -10,7 +10,6 @@ import assertk.assertions.contains
 import assertk.assertions.isTrue
 import domain.BragEntry
 import domain.Timeframe
-import infrastructure.version.VersionChecker
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
@@ -18,6 +17,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import ports.VersionChecker
 import usecases.AddBragUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase

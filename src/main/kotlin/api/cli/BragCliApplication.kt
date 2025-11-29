@@ -11,10 +11,10 @@ import api.cli.presenters.BragPresenter
 import api.cli.presenters.JiraIssueSyncPresenter
 import api.cli.presenters.PullRequestSyncPresenter
 import domain.Timeframe
-import infrastructure.version.VersionChecker
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import ports.UserInput
+import ports.VersionChecker
 import usecases.AddBragUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
