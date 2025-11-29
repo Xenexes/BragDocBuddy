@@ -16,7 +16,8 @@ private val logger = KotlinLogging.logger {}
 class GitHubVersionChecker(
     private val currentVersionProvider: CurrentVersionProvider,
     private val githubRepository: String = "Xenexes/BragDocBuddy",
-) : VersionChecker {
+) : VersionChecker,
+    AutoCloseable {
     companion object {
         private const val NOTIFICATION_BOX_WIDTH = 60
     }
@@ -142,6 +143,10 @@ class GitHubVersionChecker(
         return " ".repeat(padding) + text + " ".repeat(padding + extraPadding)
     }
 
+    override fun close() {
+        logger.debug { "Closing version checker HTTP client" }
+        httpClient.close()
+    }
 }
 
 class PropertiesVersionProvider : CurrentVersionProvider {

@@ -1,9 +1,41 @@
 import api.cli.BragCliApplication
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.core.context.GlobalContext.stopKoin
+import org.koin.java.KoinJavaComponent.getKoin
+import ports.GitHubClient
+import ports.JiraClient
+import ports.VersionChecker
 import kotlin.system.exitProcess
 
+fun cleanupResources() {
+    try {
+        val koin = getKoin()
+        // Close all AutoCloseable resources
+        listOf(
+            koin.getOrNull<JiraClient>(),
+            koin.getOrNull<GitHubClient>(),
+            koin.getOrNull<VersionChecker>(),
+        ).forEach { resource ->
+            (resource as? AutoCloseable)?.close()
+        }
+    } catch (e: Exception) {
+        // Ignore errors during cleanup
+    }
+}
+
 fun main(args: Array<String>) {
+    // Register shutdown hook to ensure resources are cleaned up
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            try {
+                cleanupResources()
+                stopKoin()
+            } catch (e: Exception) {
+                // Ignore errors during shutdown
+            }
+        },
+    )
+
     try {
         startKoin {
             modules(appModules)
@@ -21,6 +53,7 @@ fun main(args: Array<String>) {
         println("Error: ${e.message}")
         exitProcess(1)
     } finally {
+        cleanupResources()
         stopKoin()
     }
 }

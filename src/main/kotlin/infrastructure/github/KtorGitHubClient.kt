@@ -25,7 +25,8 @@ private val logger = KotlinLogging.logger {}
 class KtorGitHubClient(
     private val configuration: GitHubConfiguration,
     httpClientFactory: HttpClientFactory,
-) : GitHubClient {
+) : GitHubClient,
+    AutoCloseable {
     companion object {
         private const val GITHUB_API_PAGE_SIZE = 100
         private const val GITHUB_API_MAX_PAGES = 10
@@ -120,5 +121,10 @@ class KtorGitHubClient(
             url = htmlUrl,
             mergedAt = mergedAtDateTime,
         )
+    }
+
+    override fun close() {
+        logger.debug { "Closing GitHub HTTP client" }
+        client.close()
     }
 }

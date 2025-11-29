@@ -26,7 +26,8 @@ class KtorJiraClient(
     private val configuration: JiraConfiguration,
     private val queryBuilder: JiraQueryBuilder,
     private val issueFilter: JiraIssueFilter,
-) : JiraClient {
+) : JiraClient,
+    AutoCloseable {
     companion object {
         private const val JIRA_API_PAGE_SIZE = 50
     }
@@ -157,5 +158,10 @@ class KtorJiraClient(
         return filtered
             .map { JiraIssueDomainMapper.toDomain(it, configuration.url!!) }
             .sortedBy { it.resolvedAt }
+    }
+
+    override fun close() {
+        logger.debug { "Closing Jira HTTP client" }
+        client.close()
     }
 }
