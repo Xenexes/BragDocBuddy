@@ -3,7 +3,7 @@ package usecases
 import domain.BragEntry
 import domain.PullRequestSyncResult
 import domain.Timeframe
-import infrastructure.github.GitHubConfiguration
+import domain.config.GitHubConfiguration
 import io.github.oshai.kotlinlogging.KotlinLogging
 import ports.BragRepository
 import ports.GitHubClient

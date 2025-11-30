@@ -4,7 +4,7 @@ import domain.BragEntry
 import domain.JiraIssue
 import domain.JiraIssueSyncResult
 import domain.Timeframe
-import infrastructure.jira.JiraConfiguration
+import domain.config.JiraConfiguration
 import io.github.oshai.kotlinlogging.KotlinLogging
 import ports.BragRepository
 import ports.JiraClient

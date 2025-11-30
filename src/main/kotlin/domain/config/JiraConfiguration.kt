@@ -1,4 +1,4 @@
-package infrastructure.jira
+package domain.config
 
 data class JiraConfiguration(
     val enabled: Boolean,

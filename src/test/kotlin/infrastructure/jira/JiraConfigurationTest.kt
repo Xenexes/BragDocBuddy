@@ -1,5 +1,6 @@
 package infrastructure.jira
 
+import domain.config.JiraConfiguration
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

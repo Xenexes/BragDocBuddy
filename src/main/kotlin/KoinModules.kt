@@ -1,10 +1,10 @@
+import domain.config.GitHubConfiguration
+import domain.config.JiraConfiguration
 import infrastructure.git.GitVersionControl
 import infrastructure.git.NoOpVersionControl
-import infrastructure.github.GitHubConfiguration
 import infrastructure.github.KtorGitHubClient
 import infrastructure.http.HttpClientFactory
 import infrastructure.input.ConsoleUserInput
-import infrastructure.jira.JiraConfiguration
 import infrastructure.jira.JiraIssueFilter
 import infrastructure.jira.JiraQueryBuilder
 import infrastructure.jira.KtorJiraClient

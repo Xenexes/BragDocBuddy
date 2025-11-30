@@ -4,7 +4,7 @@ import domain.DateRange
 import domain.JiraIssue
 import domain.JiraIssueSyncResult
 import domain.Timeframe
-import infrastructure.jira.JiraConfiguration
+import domain.config.JiraConfiguration
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

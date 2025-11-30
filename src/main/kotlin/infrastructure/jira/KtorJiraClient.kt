@@ -2,6 +2,7 @@ package infrastructure.jira
 
 import domain.DateRange
 import domain.JiraIssue
+import domain.config.JiraConfiguration
 import infrastructure.http.HttpClientFactory
 import infrastructure.jira.dto.JiraErrorDto
 import infrastructure.jira.dto.JiraIssueDto

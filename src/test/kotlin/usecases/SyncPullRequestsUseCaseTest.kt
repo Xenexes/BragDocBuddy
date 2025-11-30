@@ -5,7 +5,7 @@ import domain.DateRange
 import domain.PullRequest
 import domain.PullRequestSyncResult
 import domain.Timeframe
-import infrastructure.github.GitHubConfiguration
+import domain.config.GitHubConfiguration
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

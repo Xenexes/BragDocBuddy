@@ -2,6 +2,7 @@ package infrastructure.github
 
 import domain.DateRange
 import domain.PullRequest
+import domain.config.GitHubConfiguration
 import infrastructure.github.dto.GitHubErrorDto
 import infrastructure.github.dto.GitHubPullRequestDto
 import infrastructure.github.dto.GitHubSearchResponseDto

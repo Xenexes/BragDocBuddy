@@ -1,4 +1,4 @@
-package infrastructure.github
+package domain.config
 
 data class GitHubConfiguration(
     val enabled: Boolean,
