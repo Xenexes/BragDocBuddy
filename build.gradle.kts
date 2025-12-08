@@ -32,7 +32,7 @@ dependencies {
     testImplementation("io.insert-koin:koin-test-junit5:4.1.1")
     testImplementation("com.willowtreeapps.assertk:assertk:0.28.1")
     testImplementation("org.junit.jupiter:junit-jupiter-params:6.0.1")
-    testImplementation("io.mockk:mockk:1.14.6")
+    testImplementation("io.mockk:mockk:1.14.7")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
