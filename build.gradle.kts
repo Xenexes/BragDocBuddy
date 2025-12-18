@@ -1,17 +1,19 @@
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.serialization") version "2.2.21"
+    kotlin("jvm") version "2.3.0"
+    kotlin("plugin.serialization") version "2.3.0"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
     jacoco
     id("com.gradleup.shadow") version "9.3.0"
     id("org.graalvm.buildtools.native") version "0.11.3"
     `jvm-test-suite`
+    idea
 }
 
 group = "de.xenexes"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -56,44 +58,19 @@ java {
     }
 }
 
-tasks.register("generateVersionPropertiesAndConstant") {
+tasks.register<GenerateVersionTask>("generateVersionPropertiesAndConstant") {
     group = "build"
     description = "Generates version.properties file and Version.kt constant"
 
-    val resourcesOutputDir =
-        layout.buildDirectory
-            .dir("resources/main")
-            .get()
-            .asFile
-    val kotlinOutputDir =
-        layout.buildDirectory
-            .dir("generated/sources/version/kotlin/infrastructure/version")
-            .get()
-            .asFile
+    version.set(project.version.toString())
 
-    outputs.dir(resourcesOutputDir)
-    outputs.dir(kotlinOutputDir)
+    resourcesOutputDir.set(
+        layout.buildDirectory.dir("resources/main"),
+    )
 
-    doLast {
-        // Generate version.properties for JAR builds
-        resourcesOutputDir.mkdirs()
-        File(resourcesOutputDir, "version.properties").writeText("version=${project.version}\n")
-        println("Generated version.properties with version: ${project.version}")
-
-        // Generate Version.kt for compile-time constant (works in native images)
-        kotlinOutputDir.mkdirs()
-        File(kotlinOutputDir, "Version.kt").writeText(
-            """
-            |package infrastructure.version
-            |
-            |object Version {
-            |    const val VERSION = "${project.version}"
-            |}
-            |
-            """.trimMargin(),
-        )
-        println("Generated Version.kt with version: ${project.version}")
-    }
+    kotlinOutputDir.set(
+        layout.buildDirectory.dir("generated/sources/version/kotlin/infrastructure/version"),
+    )
 }
 
 tasks.named("compileKotlin") {
@@ -130,7 +107,7 @@ testing {
 
         register<JvmTestSuite>("konsistTest") {
             dependencies {
-                implementation(project())
+                implementation(project(":"))
                 implementation("com.lemonappdev:konsist:0.17.3")
             }
 
@@ -155,7 +132,7 @@ tasks.named("konsistTest") {
 
 tasks.shadowJar {
     archiveBaseName.set("BragDocBuddy")
-    archiveClassifier.set("")
+    archiveClassifier.set("all")
     archiveVersion.set(project.version.toString())
     manifest {
         attributes(
@@ -196,4 +173,37 @@ tasks.register("dist") {
     group = "distribution"
     description = "Creates all distribution artifacts (fat jar and native binary)"
     dependsOn("shadowJar", "nativeCompile")
+}
+
+abstract class GenerateVersionTask : DefaultTask() {
+    @get:Input
+    abstract val version: Property<String>
+
+    @get:OutputDirectory
+    abstract val resourcesOutputDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val kotlinOutputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        // version.properties
+        val resourcesDir = resourcesOutputDir.get().asFile
+        resourcesDir.mkdirs()
+        File(resourcesDir, "version.properties")
+            .writeText("version=${version.get()}\n")
+
+        // Version.kt
+        val kotlinDir = kotlinOutputDir.get().asFile
+        kotlinDir.mkdirs()
+        File(kotlinDir, "Version.kt").writeText(
+            """
+            package infrastructure.version
+
+            object Version {
+                const val VERSION = "${version.get()}"
+            }
+            """.trimIndent() + "\n",
+        )
+    }
 }
