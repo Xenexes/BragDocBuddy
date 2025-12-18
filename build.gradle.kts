@@ -27,6 +27,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
+    implementation("ai.koog:koog-agents:0.5.3")
+
     testImplementation(kotlin("test"))
     testImplementation("io.insert-koin:koin-test:4.1.1")
     testImplementation("io.insert-koin:koin-test-junit5:4.1.1")
@@ -165,6 +167,10 @@ tasks.shadowJar {
         )
     }
     mergeServiceFiles()
+}
+
+tasks.named("build") {
+    dependsOn("shadowJar")
 }
 
 tasks.jacocoTestReport {

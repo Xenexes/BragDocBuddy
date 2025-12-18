@@ -107,6 +107,20 @@ Available placeholders:
 3. Give it a name (e.g., "BragDocBuddy")
 4. Copy the token and set it as environment variable
 
+**Optional Ollama AI Integration (experimental):**
+If you want to use AI to generate performance review summaries from your brag entries:
+```shell
+export BRAG_DOC_OLLAMA_ENABLED=true  # Default: true
+export BRAG_DOC_OLLAMA_URL=http://localhost:11434  # Default
+export BRAG_DOC_OLLAMA_MODEL=llama3.2  # Default
+```
+
+**How to set up Ollama:**
+1. Install Ollama from https://ollama.ai
+2. Pull a model: `ollama pull llama3.2`
+3. Ollama runs automatically on http://localhost:11434
+4. Run `BragDocBuddy summarize <timeframe> performance-review`
+
 On a new brag doc you can then initialize the document directory by using the `init` subcommand.
 
 ```shell
@@ -169,6 +183,31 @@ BragDocBuddy sync-jira <timeframe> --print-only
 Show current version and check for updates
 ```shell
 BragDocBuddy version
+```
+
+Generate AI-powered performance review summary
+```shell
+BragDocBuddy summarize <timeframe> performance-review
+# Example: BragDocBuddy summarize q4 performance-review
+# Example: BragDocBuddy summarize last-year performance-review
+```
+
+List available AI prompt templates
+```shell
+BragDocBuddy templates list
+```
+
+View a specific template
+```shell
+BragDocBuddy templates show performance-review
+```
+
+Export templates for customization
+```shell
+BragDocBuddy templates export
+# Templates are exported to $BRAG_DOC/.templates/
+# Edit the template file to customize the AI prompt
+# Your custom template will be used automatically
 ```
 
 ## Timeframes
@@ -253,6 +292,57 @@ BragDocBuddy sync-jira last-month --print-only
 | `BRAG_DOC_JIRA_EMAIL`                 | Your Jira email address                                      | -       | No**     |
 | `BRAG_DOC_JIRA_API_TOKEN`             | Jira API token                                               | -       | No**     |
 | `BRAG_DOC_JIRA_JQL_TEMPLATE`          | Custom JQL query template with {email}, {startDate}, {endDate} placeholders | Built-in template | No       |
+| `BRAG_DOC_OLLAMA_ENABLED`             | Enable Ollama AI features                                    | `true`  | No       |
+| `BRAG_DOC_OLLAMA_URL`                 | Ollama server URL                                            | `http://localhost:11434` | No       |
+| `BRAG_DOC_OLLAMA_MODEL`               | Ollama model to use                                          | `llama3.2` | No       |
+| `BRAG_DOC_TEMPLATES_DIR`              | Custom templates directory for AI prompts                    | -       | No       |
 
 \* Required when `BRAG_DOC_GITHUB_PR_SYNC_ENABLED=true`
 \*\* Required when `BRAG_DOC_JIRA_SYNC_ENABLED=true`
+
+## AI-Powered Summarization
+
+BragDocBuddy includes AI-powered summarization to transform your brag entries into polished performance review documents.
+
+### Requirements
+- **Ollama** installed and running locally (https://ollama.ai)
+- A compatible LLM model (default: llama3.2)
+
+### How it works
+1. BragDocBuddy reads your brag entries for the specified timeframe
+2. Uses a customizable performance review template
+3. Sends entries to your local Ollama instance
+4. Generates a comprehensive performance review document
+5. Saves the report to `$BRAG_DOC/.reports/`
+
+### Template Customization
+The performance review template uses placeholders that get filled with your actual data:
+- `{timeframe}` - Time period (e.g., "Q4 2024", "2023")
+- `{count}` - Number of brag entries
+- `{entries}` - Your formatted brag entries
+
+Export and customize the template:
+```shell
+BragDocBuddy templates export
+# Edit: $BRAG_DOC/.templates/performance-review.txt
+# Your customized template will be used automatically
+```
+
+### Example Workflow
+```shell
+# Add brags throughout the quarter
+BragDocBuddy -c "Reduced API latency by 40% through database optimization"
+BragDocBuddy -c "Mentored 2 junior developers on code review best practices"
+
+# At quarter end, generate performance review
+BragDocBuddy summarize q4 performance-review
+
+# Output saved to: $BRAG_DOC/.reports/quarter-four_performance-review_2024-12-18T15-30-00.md
+```
+
+The generated document includes:
+- Executive summary of accomplishments
+- Major projects with quantified impact
+- Collaboration and mentorship examples
+- Technical growth and learning
+- Goals and areas for improvement

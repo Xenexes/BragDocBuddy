@@ -1,5 +1,9 @@
 import domain.config.GitHubConfiguration
 import domain.config.JiraConfiguration
+import domain.config.OllamaConfiguration
+import infrastructure.ai.DirectOllamaClient
+import infrastructure.ai.FileTemplateService
+import infrastructure.ai.SimpleKoogAIService
 import infrastructure.git.GitVersionControl
 import infrastructure.git.NoOpVersionControl
 import infrastructure.github.KtorGitHubClient
@@ -10,13 +14,17 @@ import infrastructure.jira.JiraQueryBuilder
 import infrastructure.jira.KtorJiraClient
 import infrastructure.parser.TimeframeToDateRangeParser
 import infrastructure.persistence.MarkdownBragRepository
+import infrastructure.reports.MarkdownReportWriter
 import infrastructure.version.GitHubVersionChecker
 import infrastructure.version.PropertiesVersionProvider
 import org.koin.dsl.module
+import ports.AIClient
 import ports.BragRepository
 import ports.CurrentVersionProvider
 import ports.GitHubClient
 import ports.JiraClient
+import ports.ReportWriter
+import ports.TemplateService
 import ports.TimeframeParser
 import ports.UserInput
 import ports.VersionChecker
@@ -24,6 +32,7 @@ import ports.VersionControl
 import usecases.AddBragUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
+import usecases.SummarizeBragsUseCase
 import usecases.SyncJiraIssuesUseCase
 import usecases.SyncPullRequestsUseCase
 
@@ -71,6 +80,15 @@ val configurationModule =
                 email = email,
                 apiToken = apiToken,
                 jqlTemplate = jqlTemplate ?: JiraConfiguration.DEFAULT_JQL_TEMPLATE,
+            )
+        }
+
+        single<OllamaConfiguration> {
+            OllamaConfiguration(
+                url = System.getenv("BRAG_DOC_OLLAMA_URL") ?: OllamaConfiguration.DEFAULT_URL,
+                model = System.getenv("BRAG_DOC_OLLAMA_MODEL") ?: OllamaConfiguration.DEFAULT_MODEL,
+                enabled = System.getenv("BRAG_DOC_OLLAMA_ENABLED")?.lowercase() != "false",
+                templatesDir = System.getenv("BRAG_DOC_TEMPLATES_DIR"),
             )
         }
     }
@@ -124,6 +142,31 @@ val infrastructureModule =
         single<UserInput> {
             ConsoleUserInput()
         }
+
+        // Use DirectOllamaClient instead of SimpleKoogAIService due to Koog 0.5.3 serialization bug
+        // See: https://github.com/JetBrains/koog/issues/190
+        single<DirectOllamaClient> {
+            DirectOllamaClient(get())
+        }
+
+        single<AIClient> {
+            get<DirectOllamaClient>()
+        }
+
+        single<SimpleKoogAIService> {
+            SimpleKoogAIService(get())
+        }
+
+        single<TemplateService> {
+            FileTemplateService(
+                appConfiguration = get(),
+                ollamaConfiguration = get(),
+            )
+        }
+
+        single<ReportWriter> {
+            MarkdownReportWriter(get())
+        }
     }
 
 val useCaseModule =
@@ -162,6 +205,15 @@ val useCaseModule =
                 bragRepository = get(),
                 timeframeParser = get(),
                 jiraConfig = get(),
+            )
+        }
+
+        single<SummarizeBragsUseCase> {
+            SummarizeBragsUseCase(
+                getBragsUseCase = get(),
+                templateService = get(),
+                aiClient = get(),
+                reportWriter = get()
             )
         }
     }

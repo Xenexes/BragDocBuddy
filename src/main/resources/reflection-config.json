@@ -134,5 +134,21 @@
   {
     "name": "infrastructure.github.dto.PullRequestRefDto$Companion",
     "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.ai.OllamaGenerateRequest",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.ai.OllamaGenerateRequest$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
+  },
+  {
+    "name": "infrastructure.ai.OllamaGenerateResponse",
+    "fields": [{"name":"Companion"}]
+  },
+  {
+    "name": "infrastructure.ai.OllamaGenerateResponse$Companion",
+    "methods":[{"name":"serializer","parameterTypes":[]}]
   }
 ]

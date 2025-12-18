@@ -88,4 +88,71 @@ class SimpleArchitectureTest {
                     !it.text.contains("inject()")
             }
     }
+
+    @Test
+    fun `use cases must depend only on ports not concrete infrastructure implementations`() {
+        Konsist
+            .scopeFromProject()
+            .classes()
+            .withPackage("..usecases..")
+            .withNameEndingWith("UseCase")
+            .assertTrue { useCase ->
+                val imports = useCase.containingFile.imports.map { it.name }
+
+                val hasInfrastructureImport =
+                    imports.any { import ->
+                        import.startsWith("infrastructure.") &&
+                            !import.contains("Test")
+                    }
+
+                !hasInfrastructureImport
+            }
+    }
+
+    @Test
+    fun `API commands must not perform file I-O operations`() {
+        Konsist
+            .scopeFromProject()
+            .classes()
+            .withPackage("..api.cli.commands..")
+            .withNameEndingWith("Command")
+            .assertTrue { command ->
+                val fileContent = command.containingFile.text
+
+                val hasFileImport =
+                    fileContent.contains("import java.io.File") ||
+                        fileContent.contains("import java.io.*")
+
+                val hasFileOperations =
+                    fileContent.contains("File(") ||
+                        fileContent.contains(".mkdirs()") ||
+                        fileContent.contains(".writeText(") ||
+                        fileContent.contains(".readText(")
+
+                !hasFileImport && !hasFileOperations
+            }
+    }
+
+    @Test
+    fun `Main-kt must not import concrete infrastructure implementations`() {
+        Konsist
+            .scopeFromProject()
+            .files
+            .assertTrue { file ->
+                if (file.name == "Main") {
+                    val imports = file.imports.map { it.name }
+
+                    // Main.kt should not import concrete infrastructure classes
+                    val hasConcreteInfraImport =
+                        imports.any { import ->
+                            import.startsWith("infrastructure.") &&
+                                !import.contains("Test")
+                        }
+
+                    !hasConcreteInfraImport
+                } else {
+                    true
+                }
+            }
+    }
 }

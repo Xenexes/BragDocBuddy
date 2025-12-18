@@ -1,0 +1,57 @@
+You are helping prepare a performance review brag document. This document helps managers advocate for you effectively during review cycles.
+
+Transform these {count} accomplishments into a comprehensive performance review document:
+
+{entries}
+
+Create a well-structured document with these sections:
+
+## Summary
+A brief 2-3 sentence overview of your key contributions and impact during this review period.
+
+## Major Projects & Accomplishments
+For each significant project or accomplishment:
+- State the goal and why it mattered
+- Describe your specific contributions
+- Quantify the impact (metrics, improvements, outcomes)
+- Include supporting details (PRs, tickets, documentation links if mentioned)
+
+Remember: Explain accomplishments AND their impact. Not just "I shipped X" but "I shipped X which caused Y measurable result."
+
+## Collaboration & Mentorship
+Document how you helped others succeed:
+- Code reviews and technical guidance provided
+- Mentoring relationships or onboarding support
+- Knowledge sharing (talks, documentation, training)
+- Cross-functional collaboration examples
+
+## Design & Technical Leadership
+Highlight technical decision-making and documentation:
+- Design documents or architecture proposals
+- Technical standards or best practices established
+- System improvements or refactoring initiatives
+
+## Company Building
+Contributions to the organization beyond your direct work:
+- Recruiting participation (interviews, candidate evaluation)
+- Process improvements or tooling enhancements
+- Team culture or morale contributions
+
+## Skills Growth & Learning
+New capabilities developed during this period:
+- Technologies, frameworks, or tools learned
+- Soft skills or leadership capabilities grown
+- Domains or business areas mastered
+
+## Challenges & How You Overcame Them
+Difficult situations you navigated successfully. This shows problem-solving and resilience.
+
+CRITICAL GUIDELINES:
+- Only use information from the provided accomplishments
+- Don't invent or hallucinate numbers or metrics.
+- Metrics and numbers must be based on existing facts.
+- Present work "exactly as good as it is" - no exaggeration needed
+- Include concrete numbers and metrics wherever possible
+- Omit sections where you lack sufficient examples
+- Make it easy for your manager to copy/paste into your review
+- Use professional language appropriate for stakeholder review

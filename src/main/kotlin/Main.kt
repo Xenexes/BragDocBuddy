@@ -2,6 +2,7 @@ import api.cli.BragCliApplication
 import org.koin.core.context.GlobalContext.startKoin
 import org.koin.core.context.GlobalContext.stopKoin
 import org.koin.java.KoinJavaComponent.getKoin
+import ports.AIClient
 import ports.GitHubClient
 import ports.JiraClient
 import ports.VersionChecker
@@ -12,8 +13,9 @@ fun cleanupResources() {
         val koin = getKoin()
         // Close all AutoCloseable resources
         listOf(
-            koin.getOrNull<JiraClient>(),
+            koin.getOrNull<AIClient>(),
             koin.getOrNull<GitHubClient>(),
+            koin.getOrNull<JiraClient>(),
             koin.getOrNull<VersionChecker>(),
         ).forEach { resource ->
             (resource as? AutoCloseable)?.close()
@@ -24,7 +26,7 @@ fun cleanupResources() {
 }
 
 fun main(args: Array<String>) {
-    // Register shutdown hook to ensure resources are cleaned up
+    // Shutdown hook to ensure resources are cleaned up on JVM exit
     Runtime.getRuntime().addShutdownHook(
         Thread {
             try {
