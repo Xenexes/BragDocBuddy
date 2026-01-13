@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.github.oshai:kotlin-logging-jvm:7.0.13")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.14")
     implementation("org.slf4j:slf4j-simple:2.0.17")
     implementation("io.insert-koin:koin-core:4.1.1")
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
