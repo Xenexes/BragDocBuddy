@@ -63,7 +63,7 @@ jobs:
     - name: Derive semantic version (for existing releases)
       id: semver
       if: steps.check_initial.outputs.is_initial == 'false'
-      uses: paulhatch/semantic-version@v5.4.0
+      uses: paulhatch/semantic-version@v6.0.1
       with:
         tag_prefix: "v"
         major_pattern: "(BREAKING CHANGE:|\\w+!:)"  # BREAKING CHANGE or type!:
