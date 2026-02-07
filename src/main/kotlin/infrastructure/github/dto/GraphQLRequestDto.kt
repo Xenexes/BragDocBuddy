@@ -3,7 +3,7 @@ package infrastructure.github.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class GitHubUserDto(
-    val login: String,
-    val id: Long,
+data class GraphQLRequestDto(
+    val query: String,
+    val variables: Map<String, String?>,
 )

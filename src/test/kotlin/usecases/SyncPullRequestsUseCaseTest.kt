@@ -415,6 +415,145 @@ class SyncPullRequestsUseCaseTest {
         }
 
     @Test
+    fun `should include description in brag content when present`() =
+        runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
+            val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
+            val pullRequests =
+                listOf(
+                    PullRequest(
+                        number = 123,
+                        title = "Add feature X",
+                        url = "https://github.com/org/repo/pull/123",
+                        mergedAt = LocalDateTime.of(2025, 1, 15, 10, 0),
+                        description = "This PR adds feature X with improved performance",
+                    ),
+                )
+
+            every { gitHubConfig.enabled } returns true
+            every { gitHubConfig.isConfigured() } returns true
+            every { gitHubConfig.organization } returns "test-org"
+            every { gitHubConfig.username } returns "test-user"
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
+            coEvery {
+                gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
+            } returns pullRequests
+
+            val entrySlot = slot<BragEntry>()
+            every { bragRepository.save(capture(entrySlot)) } returns true
+
+            useCase =
+                SyncPullRequestsUseCase(
+                    gitHubClient,
+                    bragRepository,
+                    timeframeParser,
+                    gitHubConfig,
+                )
+
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
+
+            verify(exactly = 1) { bragRepository.save(any()) }
+            val capturedEntry = entrySlot.captured
+            assertTrue(capturedEntry.content.contains("[PR #123]"))
+            assertTrue(capturedEntry.content.contains("Add feature X"))
+            assertTrue(capturedEntry.content.contains("https://github.com/org/repo/pull/123"))
+            assertTrue(capturedEntry.content.contains("| This PR adds feature X with improved performance"))
+
+            assertTrue(result is PullRequestSyncResult.Synced)
+            assertEquals(1, (result as PullRequestSyncResult.Synced).addedCount)
+        }
+
+    @Test
+    fun `should not include description separator when description is null`() =
+        runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
+            val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
+            val pullRequests =
+                listOf(
+                    PullRequest(
+                        number = 123,
+                        title = "Fix bug",
+                        url = "https://github.com/org/repo/pull/123",
+                        mergedAt = LocalDateTime.of(2025, 1, 15, 10, 0),
+                        description = null,
+                    ),
+                )
+
+            every { gitHubConfig.enabled } returns true
+            every { gitHubConfig.isConfigured() } returns true
+            every { gitHubConfig.organization } returns "test-org"
+            every { gitHubConfig.username } returns "test-user"
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
+            coEvery {
+                gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
+            } returns pullRequests
+
+            val entrySlot = slot<BragEntry>()
+            every { bragRepository.save(capture(entrySlot)) } returns true
+
+            useCase =
+                SyncPullRequestsUseCase(
+                    gitHubClient,
+                    bragRepository,
+                    timeframeParser,
+                    gitHubConfig,
+                )
+
+            useCase.syncPullRequests(timeframeSpec, printOnly = false)
+
+            val capturedEntry = entrySlot.captured
+            assertEquals(
+                "[PR #123] Fix bug - https://github.com/org/repo/pull/123",
+                capturedEntry.content,
+            )
+        }
+
+    @Test
+    fun `should not include description separator when description is blank`() =
+        runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
+            val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
+            val pullRequests =
+                listOf(
+                    PullRequest(
+                        number = 123,
+                        title = "Fix bug",
+                        url = "https://github.com/org/repo/pull/123",
+                        mergedAt = LocalDateTime.of(2025, 1, 15, 10, 0),
+                        description = "   ",
+                    ),
+                )
+
+            every { gitHubConfig.enabled } returns true
+            every { gitHubConfig.isConfigured() } returns true
+            every { gitHubConfig.organization } returns "test-org"
+            every { gitHubConfig.username } returns "test-user"
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
+            coEvery {
+                gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
+            } returns pullRequests
+
+            val entrySlot = slot<BragEntry>()
+            every { bragRepository.save(capture(entrySlot)) } returns true
+
+            useCase =
+                SyncPullRequestsUseCase(
+                    gitHubClient,
+                    bragRepository,
+                    timeframeParser,
+                    gitHubConfig,
+                )
+
+            useCase.syncPullRequests(timeframeSpec, printOnly = false)
+
+            val capturedEntry = entrySlot.captured
+            assertEquals(
+                "[PR #123] Fix bug - https://github.com/org/repo/pull/123",
+                capturedEntry.content,
+            )
+        }
+
+    @Test
     fun `should handle quarter with year`() =
         runTest {
             val timeframeSpec = TimeframeSpec.QuarterWithYear(1, 2025)

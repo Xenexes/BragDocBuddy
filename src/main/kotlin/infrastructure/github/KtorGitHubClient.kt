@@ -4,17 +4,20 @@ import domain.DateRange
 import domain.PullRequest
 import domain.config.GitHubConfiguration
 import infrastructure.github.dto.GitHubErrorDto
-import infrastructure.github.dto.GitHubPullRequestDto
-import infrastructure.github.dto.GitHubSearchResponseDto
+import infrastructure.github.dto.GraphQLRequestDto
+import infrastructure.github.dto.GraphQLResponseDto
+import infrastructure.github.dto.PullRequestNodeDto
 import infrastructure.http.HttpClientFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.call.body
-import io.ktor.client.request.get
 import io.ktor.client.request.headers
-import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
 import ports.GitHubClient
 import java.time.Instant
@@ -31,8 +34,29 @@ class KtorGitHubClient(
     companion object {
         private const val GITHUB_API_PAGE_SIZE = 100
         private const val GITHUB_API_MAX_PAGES = 10
-        private const val GITHUB_API_VERSION = "2022-11-28"
-        private const val GITHUB_API_BASE_URL = "https://api.github.com"
+        private const val GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
+        private const val MAX_DESCRIPTION_LENGTH = 2500
+
+        private val SEARCH_QUERY =
+            """
+            query(${'$'}query: String!, ${'$'}cursor: String) {
+              search(type: ISSUE, query: ${'$'}query, first: $GITHUB_API_PAGE_SIZE, after: ${'$'}cursor) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                nodes {
+                  ... on PullRequest {
+                    number
+                    title
+                    url
+                    mergedAt
+                    body
+                  }
+                }
+              }
+            }
+            """.trimIndent()
     }
 
     private val client = httpClientFactory.create()
@@ -42,85 +66,108 @@ class KtorGitHubClient(
         author: String,
         dateRange: DateRange,
     ): List<PullRequest> {
-        val allPullRequests = mutableListOf<GitHubPullRequestDto>()
-        var page = 1
+        val allNodes = mutableListOf<PullRequestNodeDto>()
+        var cursor: String? = null
+        var pageCount = 0
 
-        logger.info { "Fetching merged PRs for $author in $organization from ${dateRange.start} to ${dateRange.end}" }
-
-        while (true) {
-            val searchQuery =
-                buildString {
-                    append("is:pr")
-                    append(" org:$organization")
-                    append(" author:$author")
-                    append(" archived:false")
-                    append(" created:${dateRange.start}..${dateRange.end}")
-                }
-
-            if (page == 1) {
-                logger.info { "Search query: $searchQuery" }
+        val searchQuery =
+            buildString {
+                append("is:pr is:merged")
+                append(" org:$organization")
+                append(" author:$author")
+                append(" archived:false")
+                append(" created:${dateRange.start}..${dateRange.end}")
             }
 
+        logger.info { "Fetching merged PRs for $author in $organization from ${dateRange.start} to ${dateRange.end}" }
+        logger.info { "Search query: $searchQuery" }
+
+        while (true) {
+            pageCount++
+
+            val requestBody =
+                GraphQLRequestDto(
+                    query = SEARCH_QUERY,
+                    variables = mapOf("query" to searchQuery, "cursor" to cursor),
+                )
+
             val httpResponse: HttpResponse =
-                client.get("$GITHUB_API_BASE_URL/search/issues") {
+                client.post(GITHUB_GRAPHQL_URL) {
                     headers {
                         append(HttpHeaders.Authorization, "Bearer ${configuration.token}")
-                        append(HttpHeaders.Accept, "application/vnd.github+json")
-                        append("X-GitHub-Api-Version", GITHUB_API_VERSION)
                     }
-                    parameter("q", searchQuery)
-                    parameter("sort", "created")
-                    parameter("order", "desc")
-                    parameter("per_page", GITHUB_API_PAGE_SIZE)
-                    parameter("page", page)
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
                 }
 
             if (httpResponse.status.value !in 200..299) {
-                logger.error { "GitHub API error: HTTP ${httpResponse.status.value} ${httpResponse.status.description}" }
-                val errorBody = httpResponse.bodyAsText()
-                logger.error { "Response body: $errorBody" }
-
-                try {
-                    val error = Json.decodeFromString<GitHubErrorDto>(errorBody)
-                    throw IllegalStateException("GitHub API error: ${error.message}")
-                } catch (e: Exception) {
-                    throw IllegalStateException("GitHub API error: HTTP ${httpResponse.status.value}")
-                }
+                handleHttpError(httpResponse)
             }
 
-            val response: GitHubSearchResponseDto = httpResponse.body()
+            val response: GraphQLResponseDto = httpResponse.body()
 
-            logger.info { "Page $page: Found ${response.items.size} PRs (Total: ${response.totalCount})" }
+            if (!response.errors.isNullOrEmpty()) {
+                val errorMessages = response.errors.joinToString("; ") { it.message }
+                logger.error { "GraphQL errors: $errorMessages" }
+                throw IllegalStateException("GitHub GraphQL error: $errorMessages")
+            }
 
-            if (response.items.isEmpty()) break
+            val searchResult =
+                response.data?.search
+                    ?: throw IllegalStateException("GitHub GraphQL error: no data in response")
 
-            allPullRequests.addAll(response.items)
+            val nodes = searchResult.nodes.filterNotNull()
+            logger.info { "Page $pageCount: Found ${nodes.size} PRs" }
 
-            if (response.items.size < GITHUB_API_PAGE_SIZE || allPullRequests.size >= response.totalCount) break
+            allNodes.addAll(nodes)
 
-            page++
+            if (!searchResult.pageInfo.hasNextPage) break
 
-            if (page > GITHUB_API_MAX_PAGES) {
-                logger.warn { "Reached API pagination limit (${GITHUB_API_MAX_PAGES * GITHUB_API_PAGE_SIZE} results max)" }
+            cursor = searchResult.pageInfo.endCursor
+
+            if (pageCount >= GITHUB_API_MAX_PAGES) {
+                logger.warn { "Reached API pagination limit ($pageCount pages, ${allNodes.size} results)" }
                 break
             }
         }
 
-        return allPullRequests
-            .filter { it.pullRequest?.mergedAt != null }
+        return allNodes
+            .filter { it.mergedAt != null }
             .map { it.toDomain() }
             .sortedBy { it.mergedAt }
     }
 
-    private fun GitHubPullRequestDto.toDomain(): PullRequest {
-        val mergedAtInstant = Instant.parse(pullRequest!!.mergedAt!!)
+    private suspend fun handleHttpError(httpResponse: HttpResponse) {
+        logger.error { "GitHub API error: HTTP ${httpResponse.status.value} ${httpResponse.status.description}" }
+        val errorBody = httpResponse.bodyAsText()
+        logger.error { "Response body: $errorBody" }
+
+        try {
+            val error = Json.decodeFromString<GitHubErrorDto>(errorBody)
+            throw IllegalStateException("GitHub API error: ${error.message}")
+        } catch (e: IllegalStateException) {
+            throw e
+        } catch (_: Exception) {
+            throw IllegalStateException("GitHub API error: HTTP ${httpResponse.status.value}")
+        }
+    }
+
+    private fun PullRequestNodeDto.toDomain(): PullRequest {
+        val mergedAtInstant = Instant.parse(mergedAt!!)
         val mergedAtDateTime = LocalDateTime.ofInstant(mergedAtInstant, ZoneOffset.UTC)
+        val cleanedDescription =
+            body
+                ?.take(MAX_DESCRIPTION_LENGTH)
+                ?.replace(Regex("[\\r\\n]+"), " ")
+                ?.trim()
+                ?.ifBlank { null }
 
         return PullRequest(
             number = number,
             title = title,
-            url = htmlUrl,
+            url = url,
             mergedAt = mergedAtDateTime,
+            description = cleanedDescription,
         )
     }
 

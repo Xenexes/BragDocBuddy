@@ -55,7 +55,13 @@ class SyncPullRequestsUseCase(
         var skippedCount = 0
 
         pullRequests.forEach { pr ->
-            val content = "[PR #${pr.number}] ${pr.title} - ${pr.url}"
+            val content =
+                buildString {
+                    append("[PR #${pr.number}] ${pr.title} - ${pr.url}")
+                    if (!pr.description.isNullOrBlank()) {
+                        append(" | ${pr.description}")
+                    }
+                }
             val entry =
                 BragEntry(
                     timestamp = pr.mergedAt,

@@ -6,6 +6,7 @@ import domain.PullRequestSyncResult
 class PullRequestSyncPresenter {
     companion object {
         private const val SEPARATOR_WIDTH = 80
+        private const val DESCRIPTION_PREVIEW_LENGTH = 200
     }
 
     fun present(result: PullRequestSyncResult) {
@@ -48,6 +49,11 @@ class PullRequestSyncPresenter {
         println("=".repeat(SEPARATOR_WIDTH))
         pullRequests.forEach { pr ->
             println(pr.url)
+            if (!pr.description.isNullOrBlank()) {
+                val preview = pr.description.take(DESCRIPTION_PREVIEW_LENGTH)
+                val suffix = if (pr.description.length > DESCRIPTION_PREVIEW_LENGTH) "..." else ""
+                println("  $preview$suffix")
+            }
         }
         println("=".repeat(SEPARATOR_WIDTH))
         println()

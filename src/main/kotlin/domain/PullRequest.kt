@@ -7,4 +7,5 @@ data class PullRequest(
     val title: String,
     val url: String,
     val mergedAt: LocalDateTime,
+    val description: String? = null,
 )
