@@ -2,7 +2,7 @@ package api.cli.commands
 
 import api.cli.presenters.JiraIssueSyncPresenter
 import domain.JiraIssueSyncResult
-import domain.Timeframe
+import domain.TimeframeSpec
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import ports.UserInput
@@ -11,7 +11,7 @@ import kotlin.system.exitProcess
 
 class SyncJiraIssuesCommand(
     private val useCase: SyncJiraIssuesUseCase,
-    private val timeframe: Timeframe,
+    private val timeframeSpec: TimeframeSpec,
     private val printOnly: Boolean,
     private val presenter: JiraIssueSyncPresenter,
     private val userInput: UserInput,
@@ -21,8 +21,8 @@ class SyncJiraIssuesCommand(
     override fun execute() {
         runBlocking {
             try {
-                logger.info { "Executing sync Jira issues command (timeframe: $timeframe, printOnly: $printOnly)" }
-                when (val result = useCase.syncJiraIssues(timeframe, printOnly)) {
+                logger.info { "Executing sync Jira issues command (timeframe: $timeframeSpec, printOnly: $printOnly)" }
+                when (val result = useCase.syncJiraIssues(timeframeSpec, printOnly)) {
                     is JiraIssueSyncResult.ReadyToSync -> {
                         logger.info { "Ready to sync ${result.issues.size} Jira issues, waiting for user selection" }
                         presenter.presentInteractive(result.issues, userInput) { selectedIssues ->

@@ -1,8 +1,8 @@
 package ports
 
 import domain.DateRange
-import domain.Timeframe
+import domain.TimeframeSpec
 
 fun interface TimeframeParser {
-    fun parse(timeframe: Timeframe): DateRange
+    fun parse(timeframeSpec: TimeframeSpec): DateRange
 }

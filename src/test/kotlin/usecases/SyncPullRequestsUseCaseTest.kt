@@ -5,6 +5,7 @@ import domain.DateRange
 import domain.PullRequest
 import domain.PullRequestSyncResult
 import domain.Timeframe
+import domain.TimeframeSpec
 import domain.config.GitHubConfiguration
 import io.mockk.coEvery
 import io.mockk.every
@@ -49,7 +50,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncPullRequests(TimeframeSpec.Predefined(Timeframe.TODAY), printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.Disabled)
         }
@@ -67,7 +68,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncPullRequests(TimeframeSpec.Predefined(Timeframe.TODAY), printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.NotConfigured)
         }
@@ -75,6 +76,7 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should return PrintOnly with pull requests when printOnly is true`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_MONTH)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val pullRequests =
                 listOf(
@@ -96,7 +98,7 @@ class SyncPullRequestsUseCaseTest {
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.LAST_MONTH) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns pullRequests
@@ -109,7 +111,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.LAST_MONTH, printOnly = true)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = true)
 
             assertTrue(result is PullRequestSyncResult.PrintOnly)
             assertEquals(2, (result as PullRequestSyncResult.PrintOnly).pullRequests.size)
@@ -120,13 +122,14 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should return PrintOnly with empty list when no PRs found and printOnly is true`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
 
             every { gitHubConfig.enabled } returns true
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns emptyList()
@@ -139,7 +142,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.TODAY, printOnly = true)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = true)
 
             assertTrue(result is PullRequestSyncResult.PrintOnly)
             assertEquals(0, (result as PullRequestSyncResult.PrintOnly).pullRequests.size)
@@ -148,6 +151,7 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should enrich brag document and return Synced when printOnly is false`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val pullRequests =
                 listOf(
@@ -163,7 +167,7 @@ class SyncPullRequestsUseCaseTest {
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns pullRequests
@@ -179,7 +183,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
 
             verify(exactly = 1) { bragRepository.save(any()) }
             val capturedEntry = entrySlot.captured
@@ -195,13 +199,14 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should return Synced with zero counts when no PRs found and printOnly is false`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
 
             every { gitHubConfig.enabled } returns true
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns emptyList()
@@ -214,7 +219,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.Synced)
             assertEquals(0, (result as PullRequestSyncResult.Synced).addedCount)
@@ -224,6 +229,7 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should report when all pull requests are duplicates`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_MONTH)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val pullRequests =
                 listOf(
@@ -245,7 +251,7 @@ class SyncPullRequestsUseCaseTest {
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.LAST_MONTH) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns pullRequests
@@ -259,7 +265,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.LAST_MONTH, printOnly = false)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.Synced)
             assertEquals(0, (result as PullRequestSyncResult.Synced).addedCount)
@@ -269,6 +275,7 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should report mixed results when some PRs are duplicates`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_MONTH)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val pullRequests =
                 listOf(
@@ -296,7 +303,7 @@ class SyncPullRequestsUseCaseTest {
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.LAST_MONTH) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns pullRequests
@@ -313,7 +320,7 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.LAST_MONTH, printOnly = false)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.Synced)
             assertEquals(2, (result as PullRequestSyncResult.Synced).addedCount)
@@ -323,6 +330,7 @@ class SyncPullRequestsUseCaseTest {
     @Test
     fun `should handle multiple PRs added successfully`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_MONTH)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val pullRequests =
                 listOf(
@@ -344,7 +352,7 @@ class SyncPullRequestsUseCaseTest {
             every { gitHubConfig.isConfigured() } returns true
             every { gitHubConfig.organization } returns "test-org"
             every { gitHubConfig.username } returns "test-user"
-            every { timeframeParser.parse(Timeframe.LAST_MONTH) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
             } returns pullRequests
@@ -358,10 +366,90 @@ class SyncPullRequestsUseCaseTest {
                     gitHubConfig,
                 )
 
-            val result = useCase.syncPullRequests(Timeframe.LAST_MONTH, printOnly = false)
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
 
             assertTrue(result is PullRequestSyncResult.Synced)
             assertEquals(2, (result as PullRequestSyncResult.Synced).addedCount)
             assertEquals(0, result.skippedCount)
+        }
+
+    @Test
+    fun `should handle custom date range`() =
+        runTest {
+            val start = LocalDate.of(2024, 12, 1)
+            val end = LocalDate.of(2025, 2, 28)
+            val timeframeSpec = TimeframeSpec.Custom(start, end)
+            val dateRange = DateRange(start, end)
+            val pullRequests =
+                listOf(
+                    PullRequest(
+                        number = 200,
+                        title = "Custom Range PR",
+                        url = "https://github.com/org/repo/pull/200",
+                        mergedAt = LocalDateTime.of(2025, 1, 15, 10, 0),
+                    ),
+                )
+
+            every { gitHubConfig.enabled } returns true
+            every { gitHubConfig.isConfigured() } returns true
+            every { gitHubConfig.organization } returns "test-org"
+            every { gitHubConfig.username } returns "test-user"
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
+            coEvery {
+                gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
+            } returns pullRequests
+            every { bragRepository.save(any()) } returns true
+
+            useCase =
+                SyncPullRequestsUseCase(
+                    gitHubClient,
+                    bragRepository,
+                    timeframeParser,
+                    gitHubConfig,
+                )
+
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
+
+            assertTrue(result is PullRequestSyncResult.Synced)
+            assertEquals(1, (result as PullRequestSyncResult.Synced).addedCount)
+        }
+
+    @Test
+    fun `should handle quarter with year`() =
+        runTest {
+            val timeframeSpec = TimeframeSpec.QuarterWithYear(1, 2025)
+            val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31))
+            val pullRequests =
+                listOf(
+                    PullRequest(
+                        number = 300,
+                        title = "Q1 2025 PR",
+                        url = "https://github.com/org/repo/pull/300",
+                        mergedAt = LocalDateTime.of(2025, 2, 15, 10, 0),
+                    ),
+                )
+
+            every { gitHubConfig.enabled } returns true
+            every { gitHubConfig.isConfigured() } returns true
+            every { gitHubConfig.organization } returns "test-org"
+            every { gitHubConfig.username } returns "test-user"
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
+            coEvery {
+                gitHubClient.fetchMergedPullRequests("test-org", "test-user", dateRange)
+            } returns pullRequests
+            every { bragRepository.save(any()) } returns true
+
+            useCase =
+                SyncPullRequestsUseCase(
+                    gitHubClient,
+                    bragRepository,
+                    timeframeParser,
+                    gitHubConfig,
+                )
+
+            val result = useCase.syncPullRequests(timeframeSpec, printOnly = false)
+
+            assertTrue(result is PullRequestSyncResult.Synced)
+            assertEquals(1, (result as PullRequestSyncResult.Synced).addedCount)
         }
 }

@@ -2,12 +2,20 @@ package infrastructure.parser
 
 import domain.DateRange
 import domain.Timeframe
+import domain.TimeframeSpec
 import ports.TimeframeParser
 import java.time.LocalDate
 import java.time.Year
 
 class TimeframeToDateRangeParser : TimeframeParser {
-    override fun parse(timeframe: Timeframe): DateRange {
+    override fun parse(timeframeSpec: TimeframeSpec): DateRange =
+        when (timeframeSpec) {
+            is TimeframeSpec.Predefined -> parsePredefined(timeframeSpec.timeframe)
+            is TimeframeSpec.QuarterWithYear -> getQuarterDateRange(timeframeSpec.year, timeframeSpec.quarter)
+            is TimeframeSpec.Custom -> DateRange(timeframeSpec.start, timeframeSpec.end)
+        }
+
+    private fun parsePredefined(timeframe: Timeframe): DateRange {
         val today = LocalDate.now()
 
         return when (timeframe) {

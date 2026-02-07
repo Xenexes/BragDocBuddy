@@ -4,6 +4,7 @@ import domain.DateRange
 import domain.JiraIssue
 import domain.JiraIssueSyncResult
 import domain.Timeframe
+import domain.TimeframeSpec
 import domain.config.JiraConfiguration
 import io.mockk.coEvery
 import io.mockk.every
@@ -47,7 +48,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncJiraIssues(TimeframeSpec.Predefined(Timeframe.TODAY), printOnly = false)
 
             assertTrue(result is JiraIssueSyncResult.Disabled)
         }
@@ -65,7 +66,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncJiraIssues(TimeframeSpec.Predefined(Timeframe.TODAY), printOnly = false)
 
             assertTrue(result is JiraIssueSyncResult.NotConfigured)
         }
@@ -73,6 +74,7 @@ class SyncJiraIssuesUseCaseTest {
     @Test
     fun `should return PrintOnly with issues when printOnly is true`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_MONTH)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val jiraIssues =
                 listOf(
@@ -93,7 +95,7 @@ class SyncJiraIssuesUseCaseTest {
             every { jiraConfig.enabled } returns true
             every { jiraConfig.isConfigured() } returns true
             every { jiraConfig.email } returns "test@example.com"
-            every { timeframeParser.parse(Timeframe.LAST_MONTH) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 jiraClient.fetchResolvedIssues("test@example.com", dateRange)
             } returns jiraIssues
@@ -106,7 +108,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.LAST_MONTH, printOnly = true)
+            val result = useCase.syncJiraIssues(timeframeSpec, printOnly = true)
 
             assertTrue(result is JiraIssueSyncResult.PrintOnly)
             assertEquals(2, (result as JiraIssueSyncResult.PrintOnly).issues.size)
@@ -117,12 +119,13 @@ class SyncJiraIssuesUseCaseTest {
     @Test
     fun `should return PrintOnly with empty list when no issues found and printOnly is true`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
 
             every { jiraConfig.enabled } returns true
             every { jiraConfig.isConfigured() } returns true
             every { jiraConfig.email } returns "test@example.com"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 jiraClient.fetchResolvedIssues("test@example.com", dateRange)
             } returns emptyList()
@@ -135,7 +138,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.TODAY, printOnly = true)
+            val result = useCase.syncJiraIssues(timeframeSpec, printOnly = true)
 
             assertTrue(result is JiraIssueSyncResult.PrintOnly)
             assertEquals(0, (result as JiraIssueSyncResult.PrintOnly).issues.size)
@@ -144,6 +147,7 @@ class SyncJiraIssuesUseCaseTest {
     @Test
     fun `should return ReadyToSync when printOnly is false and issues are found`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
             val jiraIssues =
                 listOf(
@@ -164,7 +168,7 @@ class SyncJiraIssuesUseCaseTest {
             every { jiraConfig.enabled } returns true
             every { jiraConfig.isConfigured() } returns true
             every { jiraConfig.email } returns "test@example.com"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 jiraClient.fetchResolvedIssues("test@example.com", dateRange)
             } returns jiraIssues
@@ -177,7 +181,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncJiraIssues(timeframeSpec, printOnly = false)
 
             assertTrue(result is JiraIssueSyncResult.ReadyToSync)
             assertEquals(2, (result as JiraIssueSyncResult.ReadyToSync).issues.size)
@@ -186,12 +190,13 @@ class SyncJiraIssuesUseCaseTest {
     @Test
     fun `should return ReadyToSync with empty list when no issues found and printOnly is false`() =
         runTest {
+            val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
             val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))
 
             every { jiraConfig.enabled } returns true
             every { jiraConfig.isConfigured() } returns true
             every { jiraConfig.email } returns "test@example.com"
-            every { timeframeParser.parse(Timeframe.TODAY) } returns dateRange
+            every { timeframeParser.parse(timeframeSpec) } returns dateRange
             coEvery {
                 jiraClient.fetchResolvedIssues("test@example.com", dateRange)
             } returns emptyList()
@@ -204,7 +209,7 @@ class SyncJiraIssuesUseCaseTest {
                     jiraConfig,
                 )
 
-            val result = useCase.syncJiraIssues(Timeframe.TODAY, printOnly = false)
+            val result = useCase.syncJiraIssues(timeframeSpec, printOnly = false)
 
             assertTrue(result is JiraIssueSyncResult.ReadyToSync)
             assertEquals(0, (result as JiraIssueSyncResult.ReadyToSync).issues.size)

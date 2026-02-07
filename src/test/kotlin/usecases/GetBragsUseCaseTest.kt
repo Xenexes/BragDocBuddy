@@ -8,6 +8,7 @@ import assertk.assertions.key
 import domain.BragEntry
 import domain.DateRange
 import domain.Timeframe
+import domain.TimeframeSpec
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -25,7 +26,7 @@ class GetBragsUseCaseTest {
 
     @Test
     fun `should get brags successfully when repository is initialized`() {
-        val timeframe = Timeframe.TODAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
         val dateRange = DateRange(LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15))
         val entries =
             listOf(
@@ -34,13 +35,12 @@ class GetBragsUseCaseTest {
             )
 
         every { repository.isInitialized() } returns true
-        every { timeframeParser.parse(timeframe) } returns dateRange
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
         every { repository.findByDateRange(dateRange) } returns entries
 
-        val result = useCase.getBrags(timeframe)
+        val result = useCase.getBrags(timeframeSpec)
 
-        // Then
-        verify { timeframeParser.parse(timeframe) }
+        verify { timeframeParser.parse(timeframeSpec) }
         verify { repository.findByDateRange(dateRange) }
 
         assertThat(result).hasSize(1)
@@ -49,12 +49,12 @@ class GetBragsUseCaseTest {
 
     @Test
     fun `should throw exception when repository is not initialized`() {
-        val timeframe = Timeframe.TODAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
         every { repository.isInitialized() } returns false
 
         val exception =
             assertThrows<IllegalStateException> {
-                useCase.getBrags(timeframe)
+                useCase.getBrags(timeframeSpec)
             }
 
         assertThat(exception).hasMessage("Repository not initialized. Run 'brag init' first")
@@ -64,22 +64,22 @@ class GetBragsUseCaseTest {
 
     @Test
     fun `should return empty map when no entries found`() {
-        val timeframe = Timeframe.YESTERDAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.YESTERDAY)
         val dateRange = DateRange(LocalDate.of(2024, 1, 14), LocalDate.of(2024, 1, 14))
         val emptyEntries = emptyList<BragEntry>()
 
         every { repository.isInitialized() } returns true
-        every { timeframeParser.parse(timeframe) } returns dateRange
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
         every { repository.findByDateRange(dateRange) } returns emptyEntries
 
-        val result = useCase.getBrags(timeframe)
+        val result = useCase.getBrags(timeframeSpec)
 
         assertThat(result).hasSize(0)
     }
 
     @Test
     fun `should group entries by date correctly`() {
-        val timeframe = Timeframe.LAST_WEEK
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.LAST_WEEK)
         val dateRange = DateRange(LocalDate.of(2024, 1, 8), LocalDate.of(2024, 1, 15))
         val entries =
             listOf(
@@ -91,10 +91,10 @@ class GetBragsUseCaseTest {
             )
 
         every { repository.isInitialized() } returns true
-        every { timeframeParser.parse(timeframe) } returns dateRange
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
         every { repository.findByDateRange(dateRange) } returns entries
 
-        val result = useCase.getBrags(timeframe)
+        val result = useCase.getBrags(timeframeSpec)
 
         assertThat(result).hasSize(2)
         assertThat(result.keys).isEqualTo(setOf("2024-01-14", "2024-01-15"))
@@ -113,7 +113,7 @@ class GetBragsUseCaseTest {
 
     @Test
     fun `should handle single entry correctly`() {
-        val timeframe = Timeframe.TODAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
         val dateRange = DateRange(LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15))
         val singleEntry =
             listOf(
@@ -121,10 +121,10 @@ class GetBragsUseCaseTest {
             )
 
         every { repository.isInitialized() } returns true
-        every { timeframeParser.parse(timeframe) } returns dateRange
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
         every { repository.findByDateRange(dateRange) } returns singleEntry
 
-        val result = useCase.getBrags(timeframe)
+        val result = useCase.getBrags(timeframeSpec)
 
         assertThat(result).hasSize(1)
         assertThat(result).key("2024-01-15").hasSize(1)
@@ -133,33 +133,33 @@ class GetBragsUseCaseTest {
 
     @Test
     fun `should handle all timeframe types`() {
-        val timeframes =
+        val timeframeSpecs =
             listOf(
-                Timeframe.TODAY,
-                Timeframe.YESTERDAY,
-                Timeframe.LAST_WEEK,
-                Timeframe.LAST_MONTH,
-                Timeframe.LAST_YEAR,
+                TimeframeSpec.Predefined(Timeframe.TODAY),
+                TimeframeSpec.Predefined(Timeframe.YESTERDAY),
+                TimeframeSpec.Predefined(Timeframe.LAST_WEEK),
+                TimeframeSpec.Predefined(Timeframe.LAST_MONTH),
+                TimeframeSpec.Predefined(Timeframe.LAST_YEAR),
             )
 
         every { repository.isInitialized() } returns true
         every { repository.findByDateRange(any()) } returns emptyList()
 
-        timeframes.forEach { timeframe ->
+        timeframeSpecs.forEach { timeframeSpec ->
             val mockDateRange = DateRange(LocalDate.now(), LocalDate.now())
-            every { timeframeParser.parse(timeframe) } returns mockDateRange
+            every { timeframeParser.parse(timeframeSpec) } returns mockDateRange
         }
 
-        timeframes.forEach { timeframe ->
-            val result = useCase.getBrags(timeframe)
+        timeframeSpecs.forEach { timeframeSpec ->
+            val result = useCase.getBrags(timeframeSpec)
             assertThat(result).hasSize(0)
-            verify { timeframeParser.parse(timeframe) }
+            verify { timeframeParser.parse(timeframeSpec) }
         }
     }
 
     @Test
     fun `should preserve entry order within same date group`() {
-        val timeframe = Timeframe.TODAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
         val dateRange = DateRange(LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15))
         val entries =
             listOf(
@@ -169,14 +169,54 @@ class GetBragsUseCaseTest {
             )
 
         every { repository.isInitialized() } returns true
-        every { timeframeParser.parse(timeframe) } returns dateRange
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
         every { repository.findByDateRange(dateRange) } returns entries
 
-        val result = useCase.getBrags(timeframe)
+        val result = useCase.getBrags(timeframeSpec)
 
         val dayEntries = result["2024-01-15"]!!
         assertThat(dayEntries[0].content).isEqualTo("First entry")
         assertThat(dayEntries[1].content).isEqualTo("Second entry")
         assertThat(dayEntries[2].content).isEqualTo("Third entry")
+    }
+
+    @Test
+    fun `should handle quarter with year timeframe`() {
+        val timeframeSpec = TimeframeSpec.QuarterWithYear(1, 2025)
+        val dateRange = DateRange(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31))
+        val entries =
+            listOf(
+                BragEntry(LocalDateTime.of(2025, 2, 15, 10, 0), "Q1 achievement"),
+            )
+
+        every { repository.isInitialized() } returns true
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
+        every { repository.findByDateRange(dateRange) } returns entries
+
+        val result = useCase.getBrags(timeframeSpec)
+
+        assertThat(result).hasSize(1)
+        assertThat(result).key("2025-02-15").hasSize(1)
+    }
+
+    @Test
+    fun `should handle custom date range timeframe`() {
+        val start = LocalDate.of(2024, 12, 1)
+        val end = LocalDate.of(2025, 2, 28)
+        val timeframeSpec = TimeframeSpec.Custom(start, end)
+        val dateRange = DateRange(start, end)
+        val entries =
+            listOf(
+                BragEntry(LocalDateTime.of(2025, 1, 15, 10, 0), "Custom range achievement"),
+            )
+
+        every { repository.isInitialized() } returns true
+        every { timeframeParser.parse(timeframeSpec) } returns dateRange
+        every { repository.findByDateRange(dateRange) } returns entries
+
+        val result = useCase.getBrags(timeframeSpec)
+
+        assertThat(result).hasSize(1)
+        assertThat(result).key("2025-01-15").hasSize(1)
     }
 }

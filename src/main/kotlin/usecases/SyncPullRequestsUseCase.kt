@@ -2,7 +2,7 @@ package usecases
 
 import domain.BragEntry
 import domain.PullRequestSyncResult
-import domain.Timeframe
+import domain.TimeframeSpec
 import domain.config.GitHubConfiguration
 import io.github.oshai.kotlinlogging.KotlinLogging
 import ports.BragRepository
@@ -18,7 +18,7 @@ class SyncPullRequestsUseCase(
     private val gitHubConfig: GitHubConfiguration,
 ) {
     suspend fun syncPullRequests(
-        timeframe: Timeframe,
+        timeframeSpec: TimeframeSpec,
         printOnly: Boolean,
     ): PullRequestSyncResult {
         if (!gitHubConfig.enabled) {
@@ -31,9 +31,9 @@ class SyncPullRequestsUseCase(
             return PullRequestSyncResult.NotConfigured
         }
 
-        logger.info { "Syncing pull requests for timeframe: $timeframe, printOnly: $printOnly" }
+        logger.info { "Syncing pull requests for timeframe: $timeframeSpec, printOnly: $printOnly" }
 
-        val dateRange = timeframeParser.parse(timeframe)
+        val dateRange = timeframeParser.parse(timeframeSpec)
         val pullRequests =
             gitHubClient.fetchMergedPullRequests(
                 organization = gitHubConfig.organization!!,

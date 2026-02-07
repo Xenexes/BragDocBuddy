@@ -1,7 +1,7 @@
 package usecases
 
 import domain.BragEntry
-import domain.Timeframe
+import domain.TimeframeSpec
 import ports.BragRepository
 import ports.TimeframeParser
 
@@ -9,14 +9,14 @@ class GetBragsUseCase(
     private val repository: BragRepository,
     private val timeframeParser: TimeframeParser,
 ) {
-    fun getBrags(timeframe: Timeframe): Map<String, List<BragEntry>> {
+    fun getBrags(timeframeSpec: TimeframeSpec): Map<String, List<BragEntry>> {
         if (!repository.isInitialized()) {
             throw IllegalStateException(
                 "Repository not initialized. Run 'brag init' first",
             )
         }
 
-        val dateRange = timeframeParser.parse(timeframe)
+        val dateRange = timeframeParser.parse(timeframeSpec)
 
         val entries = repository.findByDateRange(dateRange)
 

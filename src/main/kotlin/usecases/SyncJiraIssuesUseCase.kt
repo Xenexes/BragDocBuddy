@@ -3,7 +3,7 @@ package usecases
 import domain.BragEntry
 import domain.JiraIssue
 import domain.JiraIssueSyncResult
-import domain.Timeframe
+import domain.TimeframeSpec
 import domain.config.JiraConfiguration
 import io.github.oshai.kotlinlogging.KotlinLogging
 import ports.BragRepository
@@ -19,7 +19,7 @@ class SyncJiraIssuesUseCase(
     private val jiraConfig: JiraConfiguration,
 ) {
     suspend fun syncJiraIssues(
-        timeframe: Timeframe,
+        timeframeSpec: TimeframeSpec,
         printOnly: Boolean,
     ): JiraIssueSyncResult {
         if (!jiraConfig.enabled) {
@@ -32,9 +32,9 @@ class SyncJiraIssuesUseCase(
             return JiraIssueSyncResult.NotConfigured
         }
 
-        logger.info { "Syncing Jira issues for timeframe: $timeframe, printOnly: $printOnly" }
+        logger.info { "Syncing Jira issues for timeframe: $timeframeSpec, printOnly: $printOnly" }
 
-        val dateRange = timeframeParser.parse(timeframe)
+        val dateRange = timeframeParser.parse(timeframeSpec)
         val jiraIssues =
             jiraClient.fetchResolvedIssues(
                 email = jiraConfig.email!!,

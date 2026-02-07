@@ -139,13 +139,19 @@ BragDocBuddy --comment "YOUR NEW BRAG LOG ENTRY"
 Review brags from a time period
 ```shell
 BragDocBuddy about <timeframe>
-# Example: BragDocBuddy about last-week
+# Examples:
+#   BragDocBuddy about last-week
+#   BragDocBuddy about "q1 2025"
+#   BragDocBuddy about 01.01.2025-31.03.2025
 ```
 
 Sync merged GitHub pull requests to brag document
 ```shell
 BragDocBuddy sync-prs <timeframe>
-# Example: BragDocBuddy sync-prs last-month
+# Examples:
+#   BragDocBuddy sync-prs last-month
+#   BragDocBuddy sync-prs "q4 2024"
+#   BragDocBuddy sync-prs 01.10.2024-31.12.2024
 ```
 
 Preview GitHub pull requests without adding to brag document
@@ -157,7 +163,10 @@ BragDocBuddy sync-prs <timeframe> --print-only
 Sync resolved Jira issues to brag document
 ```shell
 BragDocBuddy sync-jira <timeframe>
-# Example: BragDocBuddy sync-jira quarter-four
+# Examples:
+#   BragDocBuddy sync-jira q4
+#   BragDocBuddy sync-jira "q4 2024"
+#   BragDocBuddy sync-jira 01.10.2024-31.12.2024
 ```
 
 Preview Jira issues without adding to brag document
@@ -172,15 +181,30 @@ BragDocBuddy version
 ```
 
 ## Timeframes
+
+### Predefined Timeframes
 * `today`
 * `yesterday`
 * `last-week`
 * `last-month`
 * `last-year`
-* `q1` (January - March)
-* `q2` (April - June)
-* `q3` (July - September)
-* `q4` (October - December)
+* `q1` (January - March of current year)
+* `q2` (April - June of current year)
+* `q3` (July - September of current year)
+* `q4` (October - December of current year)
+
+### Quarter with Year
+Specify a quarter for a specific year:
+* `q1 2025` (January - March 2025)
+* `q2 2024` (April - June 2024)
+* `q3 2023` (July - September 2023)
+* `q4 2022` (October - December 2022)
+
+### Custom Date Range
+Specify an exact date range using the format `DD.MM.YYYY-DD.MM.YYYY`:
+* `01.01.2025-31.03.2025` (Q1 2025)
+* `06.12.2025-03.02.2026` (Cross-year range)
+* `15.01.2025-15.01.2025` (Single day)
 
 ## GitHub PR Sync
 

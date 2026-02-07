@@ -10,7 +10,7 @@ import api.cli.commands.VersionCommand
 import api.cli.presenters.BragPresenter
 import api.cli.presenters.JiraIssueSyncPresenter
 import api.cli.presenters.PullRequestSyncPresenter
-import domain.Timeframe
+import domain.TimeframeSpec
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import ports.UserInput
@@ -54,35 +54,20 @@ class BragCliApplication : KoinComponent {
             }
 
             args[0] == "about" && args.size > 1 -> {
-                val timeframe =
-                    Timeframe.fromString(args[1]) ?: run {
-                        println("Error: Unknown timeframe: ${args[1]}")
-                        println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
-                        exitProcess(1)
-                    }
-                ReviewCommand(getBragsUseCase, timeframe, bragPresenter)
+                val timeframeSpec = parseTimeframe(args)
+                ReviewCommand(getBragsUseCase, timeframeSpec, bragPresenter)
             }
 
             args[0] == "sync-prs" && args.size > 1 -> {
-                val timeframe =
-                    Timeframe.fromString(args[1]) ?: run {
-                        println("Error: Unknown timeframe: ${args[1]}")
-                        println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
-                        exitProcess(1)
-                    }
+                val timeframeSpec = parseTimeframe(args)
                 val printOnly = args.contains("--print-only")
-                SyncPullRequestsCommand(syncPullRequestsUseCase, timeframe, printOnly, prSyncPresenter)
+                SyncPullRequestsCommand(syncPullRequestsUseCase, timeframeSpec, printOnly, prSyncPresenter)
             }
 
             args[0] == "sync-jira" && args.size > 1 -> {
-                val timeframe =
-                    Timeframe.fromString(args[1]) ?: run {
-                        println("Error: Unknown timeframe: ${args[1]}")
-                        println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
-                        exitProcess(1)
-                    }
+                val timeframeSpec = parseTimeframe(args)
                 val printOnly = args.contains("--print-only")
-                SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframe, printOnly, jiraSyncPresenter, userInput)
+                SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframeSpec, printOnly, jiraSyncPresenter, userInput)
             }
 
             args.contains("-c") || args.contains("--comment") -> {
@@ -107,6 +92,23 @@ class BragCliApplication : KoinComponent {
             }
         }
 
+    private fun parseTimeframe(args: Array<String>): TimeframeSpec {
+        val timeframeInput =
+            if (args.size > 2 && !args[2].startsWith("-")) {
+                "${args[1]} ${args[2]}"
+            } else {
+                args[1]
+            }
+
+        return TimeframeSpec.fromString(timeframeInput) ?: run {
+            println("Error: Unknown timeframe: $timeframeInput")
+            println("Valid timeframes: today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4")
+            println("                  q1 2025, q2 2024 (quarter with year)")
+            println("                  06.12.2025-03.02.2026 (custom date range)")
+            exitProcess(1)
+        }
+    }
+
     private fun printUsage(): Nothing {
         println(
             """
@@ -123,6 +125,8 @@ class BragCliApplication : KoinComponent {
 
             Timeframes:
                 today, yesterday, last-week, last-month, last-year, q1, q2, q3, q4
+                q1 2025, q2 2024                                     Quarter with specific year
+                06.12.2025-03.02.2026                                Custom date range (DD.MM.YYYY-DD.MM.YYYY)
 
             Environment Variables:
                 BRAG_DOC                          Location of bragging document directory

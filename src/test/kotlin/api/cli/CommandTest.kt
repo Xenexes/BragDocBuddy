@@ -10,6 +10,7 @@ import assertk.assertions.contains
 import assertk.assertions.isTrue
 import domain.BragEntry
 import domain.Timeframe
+import domain.TimeframeSpec
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
@@ -81,7 +82,7 @@ class CommandTest {
     fun `ReviewCommand should execute successfully with entries`() {
         val useCase = mockk<GetBragsUseCase>()
         val presenter = BragPresenter()
-        val timeframe = Timeframe.TODAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.TODAY)
         val entries =
             mapOf(
                 "2025-01-15" to
@@ -91,12 +92,12 @@ class CommandTest {
                     ),
             )
 
-        every { useCase.getBrags(timeframe) } returns entries
-        val command = ReviewCommand(useCase, timeframe, presenter)
+        every { useCase.getBrags(timeframeSpec) } returns entries
+        val command = ReviewCommand(useCase, timeframeSpec, presenter)
 
         command.execute()
 
-        verify { useCase.getBrags(timeframe) }
+        verify { useCase.getBrags(timeframeSpec) }
         val output = getOutput()
         assertThat(output).contains("2025-01-15")
         assertThat(output).contains("10:30:00 Morning achievement")
@@ -107,15 +108,15 @@ class CommandTest {
     fun `ReviewCommand should handle empty results`() {
         val useCase = mockk<GetBragsUseCase>()
         val presenter = BragPresenter()
-        val timeframe = Timeframe.YESTERDAY
+        val timeframeSpec = TimeframeSpec.Predefined(Timeframe.YESTERDAY)
         val emptyEntries = emptyMap<String, List<BragEntry>>()
 
-        every { useCase.getBrags(timeframe) } returns emptyEntries
-        val command = ReviewCommand(useCase, timeframe, presenter)
+        every { useCase.getBrags(timeframeSpec) } returns emptyEntries
+        val command = ReviewCommand(useCase, timeframeSpec, presenter)
 
         command.execute()
 
-        verify { useCase.getBrags(timeframe) }
+        verify { useCase.getBrags(timeframeSpec) }
         assertThat(getOutput()).contains("No brags found in this time period.")
     }
 
