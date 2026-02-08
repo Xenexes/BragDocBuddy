@@ -1,0 +1,39 @@
+scalar DateTime
+scalar URI
+
+type Query {
+  search(type: SearchType!, query: String!, first: Int, after: String): SearchResultItemConnection!
+}
+
+enum SearchType {
+  ISSUE
+  REPOSITORY
+  USER
+  DISCUSSION
+}
+
+type SearchResultItemConnection {
+  pageInfo: PageInfo!
+  nodes: [SearchResultItem]
+}
+
+union SearchResultItem = PullRequest | Issue
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type PullRequest {
+  number: Int!
+  title: String!
+  url: URI!
+  mergedAt: DateTime
+  body: String
+}
+
+type Issue {
+  number: Int!
+  title: String!
+  url: URI!
+}

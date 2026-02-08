@@ -4,6 +4,7 @@ import domain.DateRange
 import domain.JiraIssue
 import domain.config.JiraConfiguration
 import infrastructure.http.HttpClientFactory
+import infrastructure.http.config.HttpClientProperties
 import infrastructure.jira.dto.JiraErrorDto
 import infrastructure.jira.dto.JiraIssueDto
 import infrastructure.jira.dto.JiraSearchJqlResponseDto
@@ -33,7 +34,7 @@ class KtorJiraClient(
         private const val JIRA_API_PAGE_SIZE = 50
     }
 
-    private val client = httpClientFactory.create()
+    private val client = httpClientFactory.create(configuration.url!!, HttpClientProperties())
 
     private suspend fun getUserAccountId(
         email: String,
@@ -41,7 +42,7 @@ class KtorJiraClient(
     ): String? {
         try {
             val response: HttpResponse =
-                client.get("${configuration.url}/rest/api/3/user/search") {
+                client.get("/rest/api/3/user/search") {
                     headers {
                         append(HttpHeaders.Authorization, authHeader)
                         append(HttpHeaders.ContentType, "application/json")

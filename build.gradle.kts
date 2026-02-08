@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.serialization") version "2.3.0"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
+    id("com.apollographql.apollo3") version "4.0.0-beta.7"
     jacoco
     id("com.gradleup.shadow") version "9.3.1"
     id("org.graalvm.buildtools.native") version "0.11.4"
@@ -22,12 +23,19 @@ dependencies {
     implementation("io.insert-koin:koin-core:4.1.1")
     implementation("io.insert-koin:koin-logger-slf4j:4.1.1")
 
-    implementation("io.ktor:ktor-client-core:3.4.0")
-    implementation("io.ktor:ktor-client-okhttp:3.4.0")
-    implementation("io.ktor:ktor-client-content-negotiation:3.4.0")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.0")
+    val ktor = "3.4.0"
+    implementation("io.ktor:ktor-client-core:$ktor")
+    implementation("io.ktor:ktor-client-okhttp:$ktor")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor")
+    implementation("io.ktor:ktor-client-logging:$ktor")
+    implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktor")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("com.apollographql.apollo3:apollo-runtime:4.0.0-beta.7")
+    implementation("com.apollographql.apollo3:apollo-engine-ktor:4.0.0-beta.7")
 
     testImplementation(kotlin("test"))
     testImplementation("io.insert-koin:koin-test:4.1.1")
@@ -91,10 +99,20 @@ tasks.matching { it.name.startsWith("runKtlint") || it.name == "ktlintFormat" }.
 
 ktlint {
     filter {
-        exclude("**/generated/**")
-        exclude("build/generated/**")
+        exclude { element ->
+            element.file.toString().contains("generated")
+        }
     }
     version.set("1.7.1")
+}
+
+apollo {
+    service("github") {
+        packageName.set("infrastructure.github.graphql")
+        srcDir("src/main/kotlin/infrastructure/github/graphql")
+        mapScalar("DateTime", "kotlin.String")
+        mapScalar("URI", "kotlin.String")
+    }
 }
 
 tasks.test {

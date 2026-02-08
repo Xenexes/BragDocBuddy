@@ -108,7 +108,6 @@ val infrastructureModule =
         single<GitHubClient> {
             KtorGitHubClient(
                 configuration = get(),
-                httpClientFactory = HttpClientFactory,
             )
         }
 
