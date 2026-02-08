@@ -1,11 +1,11 @@
 package api.cli.commands
 
-import ports.VersionChecker
+import usecases.CheckVersionUseCase
 
 class VersionCommand(
-    private val versionChecker: VersionChecker,
+    private val checkVersionUseCase: CheckVersionUseCase,
 ) : Command {
     override fun execute() {
-        versionChecker.checkForUpdates()
+        checkVersionUseCase.checkForUpdates()
     }
 }

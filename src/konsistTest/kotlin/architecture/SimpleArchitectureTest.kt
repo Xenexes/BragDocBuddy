@@ -88,4 +88,67 @@ class SimpleArchitectureTest {
                     !it.text.contains("inject()")
             }
     }
+
+    @Test
+    fun `domain layer should not depend on other layers`() {
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("..domain..")
+            .assertTrue {
+                !it.text.contains("import api.") &&
+                    !it.text.contains("import usecases.") &&
+                    !it.text.contains("import ports.") &&
+                    !it.text.contains("import infrastructure.")
+            }
+    }
+
+    @Test
+    fun `ports layer should only depend on domain`() {
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("..ports..")
+            .assertTrue {
+                !it.text.contains("import api.") &&
+                    !it.text.contains("import usecases.") &&
+                    !it.text.contains("import infrastructure.")
+            }
+    }
+
+    @Test
+    fun `usecases layer should only depend on domain and ports`() {
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("..usecases..")
+            .assertTrue {
+                !it.text.contains("import api.") &&
+                    !it.text.contains("import infrastructure.")
+            }
+    }
+
+    @Test
+    fun `infrastructure layer should not depend on api layer`() {
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("..infrastructure..")
+            .assertTrue {
+                !it.text.contains("import api.")
+            }
+    }
+
+    @Test
+    fun `api layer should not depend on ports or infrastructure`() {
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("..api..")
+            .filter { "class BragCliApplication" !in it.text }
+            .assertTrue {
+                !it.text.contains("import ports.") &&
+                    !it.text.contains("import infrastructure.")
+            }
+    }
 }

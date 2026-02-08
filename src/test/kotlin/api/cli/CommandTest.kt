@@ -18,8 +18,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import ports.VersionChecker
 import usecases.AddBragUseCase
+import usecases.CheckVersionUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
 import java.io.ByteArrayOutputStream
@@ -69,13 +69,13 @@ class CommandTest {
 
     @Test
     fun `VersionCommand should execute successfully`() {
-        val versionChecker = mockk<VersionChecker>()
-        justRun { versionChecker.checkForUpdates() }
-        val command = VersionCommand(versionChecker)
+        val checkVersionUseCase = mockk<CheckVersionUseCase>()
+        justRun { checkVersionUseCase.checkForUpdates() }
+        val command = VersionCommand(checkVersionUseCase)
 
         command.execute()
 
-        verify { versionChecker.checkForUpdates() }
+        verify { checkVersionUseCase.checkForUpdates() }
     }
 
     @Test

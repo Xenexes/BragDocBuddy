@@ -22,6 +22,7 @@ import ports.UserInput
 import ports.VersionChecker
 import ports.VersionControl
 import usecases.AddBragUseCase
+import usecases.CheckVersionUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
 import usecases.SyncJiraIssuesUseCase
@@ -166,6 +167,9 @@ val useCaseModule =
             )
         }
 
+        single<CheckVersionUseCase> {
+            CheckVersionUseCase(get())
+        }
     }
 
 val appModules =

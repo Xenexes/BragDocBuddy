@@ -2,7 +2,6 @@ package api.cli.presenters
 
 import domain.JiraIssue
 import domain.JiraIssueSyncResult
-import ports.UserInput
 
 class JiraIssueSyncPresenter {
     companion object {
@@ -43,7 +42,7 @@ class JiraIssueSyncPresenter {
 
     fun presentInteractive(
         issues: List<JiraIssue>,
-        userInput: UserInput,
+        readLine: (String) -> String?,
         onConfirm: (List<JiraIssue>) -> Unit,
     ) {
         if (issues.isEmpty()) {
@@ -54,7 +53,7 @@ class JiraIssueSyncPresenter {
         presentIssueList(issues, urlOnly = false)
 
         println("Enter issue keys to skip (comma-separated), or press Enter to add all:")
-        val input = userInput.readLine("> ")?.trim() ?: ""
+        val input = readLine("> ")?.trim() ?: ""
 
         val skipKeys =
             if (input.isBlank()) {

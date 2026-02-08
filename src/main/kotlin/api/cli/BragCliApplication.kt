@@ -14,8 +14,8 @@ import domain.TimeframeSpec
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import ports.UserInput
-import ports.VersionChecker
 import usecases.AddBragUseCase
+import usecases.CheckVersionUseCase
 import usecases.GetBragsUseCase
 import usecases.InitRepositoryUseCase
 import usecases.SyncJiraIssuesUseCase
@@ -28,7 +28,7 @@ class BragCliApplication : KoinComponent {
     private val getBragsUseCase: GetBragsUseCase by inject()
     private val syncPullRequestsUseCase: SyncPullRequestsUseCase by inject()
     private val syncJiraIssuesUseCase: SyncJiraIssuesUseCase by inject()
-    private val versionChecker: VersionChecker by inject()
+    private val checkVersionUseCase: CheckVersionUseCase by inject()
     private val userInput: UserInput by inject()
     private val bragPresenter = BragPresenter()
     private val prSyncPresenter = PullRequestSyncPresenter()
@@ -50,7 +50,7 @@ class BragCliApplication : KoinComponent {
             }
 
             args[0] == "version" -> {
-                VersionCommand(versionChecker)
+                VersionCommand(checkVersionUseCase)
             }
 
             args[0] == "about" && args.size > 1 -> {
@@ -67,7 +67,7 @@ class BragCliApplication : KoinComponent {
             args[0] == "sync-jira" && args.size > 1 -> {
                 val timeframeSpec = parseTimeframe(args)
                 val printOnly = args.contains("--print-only")
-                SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframeSpec, printOnly, jiraSyncPresenter, userInput)
+                SyncJiraIssuesCommand(syncJiraIssuesUseCase, timeframeSpec, printOnly, jiraSyncPresenter, userInput::readLine)
             }
 
             args.contains("-c") || args.contains("--comment") -> {
