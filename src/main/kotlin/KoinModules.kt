@@ -161,8 +161,11 @@ val useCaseModule =
                 bragRepository = get(),
                 timeframeParser = get(),
                 jiraConfig = get(),
+                gitHubClient = get(),
+                gitHubConfig = get(),
             )
         }
+
     }
 
 val appModules =

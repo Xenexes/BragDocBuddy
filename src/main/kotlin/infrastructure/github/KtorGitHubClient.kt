@@ -119,6 +119,7 @@ class KtorGitHubClient(
             url = url,
             mergedAt = mergedAtDateTime,
             description = cleanedDescription,
+            branchName = headRefName,
         )
     }
 

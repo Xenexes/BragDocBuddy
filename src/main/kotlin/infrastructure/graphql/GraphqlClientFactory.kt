@@ -5,7 +5,7 @@ import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.network.ktorClient
 import infrastructure.http.HttpClientFactory
 import infrastructure.http.config.HttpClientProperties
-import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 
@@ -16,8 +16,8 @@ object GraphqlClientFactory {
         httpClientProperties: HttpClientProperties = HttpClientProperties(),
     ): ApolloClientWrapper {
         val httpClient =
-            HttpClientFactory.create(serverUrl, httpClientProperties).config {
-                install(DefaultRequest) {
+            HttpClientFactory.create(serverUrl, httpClientProperties) {
+                defaultRequest {
                     header(HttpHeaders.Authorization, "Bearer ${tokenProvider()}")
                 }
             }

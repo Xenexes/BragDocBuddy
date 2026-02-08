@@ -7,4 +7,6 @@ data class JiraIssue(
     val title: String,
     val url: String,
     val resolvedAt: LocalDateTime,
+    val status: String? = null,
+    val issueType: String? = null,
 )

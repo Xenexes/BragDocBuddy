@@ -29,6 +29,8 @@ object JiraIssueDomainMapper {
             title = issue.fields.summary,
             url = "$jiraUrl/browse/${issue.key}",
             resolvedAt = resolvedAtDateTime,
+            status = issue.fields.status.name,
+            issueType = issue.fields.issuetype.name,
         )
     }
 

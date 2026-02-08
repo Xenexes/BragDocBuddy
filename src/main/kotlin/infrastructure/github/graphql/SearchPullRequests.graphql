@@ -11,6 +11,7 @@ query SearchPullRequests($query: String!, $cursor: String) {
         url
         mergedAt
         body
+        headRefName
       }
     }
   }

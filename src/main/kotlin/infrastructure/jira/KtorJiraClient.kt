@@ -162,6 +162,77 @@ class KtorJiraClient(
             .sortedBy { it.resolvedAt }
     }
 
+    override suspend fun fetchIssuesByKeys(keys: Set<String>): List<JiraIssue> {
+        if (keys.isEmpty()) return emptyList()
+
+        val authHeader =
+            "Basic ${
+                Base64.getEncoder().encodeToString(
+                    "${configuration.email}:${configuration.apiToken}".toByteArray(),
+                )
+            }"
+
+        val jql = "key in (${keys.joinToString(", ")})"
+        logger.info { "Fetching Jira issues by keys: $jql" }
+
+        val allIssues = mutableListOf<JiraIssueDto>()
+        var nextPageToken: String? = null
+        var isFirstRequest = true
+
+        while (isFirstRequest || nextPageToken != null) {
+            val httpResponse: HttpResponse =
+                client.get("${configuration.url}/rest/api/3/search/jql") {
+                    headers {
+                        append(HttpHeaders.Authorization, authHeader)
+                        append(HttpHeaders.ContentType, "application/json")
+                    }
+                    parameter("jql", jql)
+                    parameter("maxResults", JIRA_API_PAGE_SIZE)
+                    parameter("fields", "*navigable")
+                    parameter("expand", "changelog")
+
+                    if (nextPageToken != null) {
+                        parameter("nextPageToken", nextPageToken)
+                    }
+                }
+
+            if (httpResponse.status.value !in 200..299) {
+                logger.error { "Jira API error: HTTP ${httpResponse.status.value} ${httpResponse.status.description}" }
+                val errorBody = httpResponse.bodyAsText()
+                logger.error { "Response body: $errorBody" }
+
+                val errorMessage =
+                    try {
+                        val error = Json.decodeFromString<JiraErrorDto>(errorBody)
+                        error.errorMessages?.joinToString(", ")
+                            ?: error.errors?.entries?.joinToString(", ") { "${it.key}: ${it.value}" }
+                            ?: "Unknown error"
+                    } catch (e: Exception) {
+                        "HTTP ${httpResponse.status.value} - Could not parse error response"
+                    }
+
+                throw IllegalStateException("Jira API error: $errorMessage")
+            }
+
+            val response: JiraSearchJqlResponseDto = httpResponse.body()
+
+            logger.info { "Fetched ${response.issues.size} issues by keys (Total so far: ${allIssues.size + response.issues.size})" }
+
+            if (response.issues.isEmpty()) break
+
+            allIssues.addAll(response.issues)
+
+            nextPageToken = response.nextPageToken
+            isFirstRequest = false
+        }
+
+        logger.info { "Total issues fetched by keys: ${allIssues.size}" }
+
+        return allIssues
+            .map { JiraIssueDomainMapper.toDomain(it, configuration.url!!) }
+            .sortedBy { it.resolvedAt }
+    }
+
     override fun close() {
         logger.debug { "Closing Jira HTTP client" }
         client.close()

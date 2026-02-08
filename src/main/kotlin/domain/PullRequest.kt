@@ -8,4 +8,5 @@ data class PullRequest(
     val url: String,
     val mergedAt: LocalDateTime,
     val description: String? = null,
+    val branchName: String? = null,
 )

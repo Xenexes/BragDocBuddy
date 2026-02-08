@@ -111,7 +111,11 @@ class JiraIssueSyncPresenter {
             if (urlOnly) {
                 println(issue.url)
             } else {
-                println("[${issue.key}] ${issue.title}")
+                val metadata =
+                    listOfNotNull(issue.issueType, issue.status)
+                        .filter { it.isNotBlank() }
+                val suffix = if (metadata.isNotEmpty()) " (${metadata.joinToString(", ")})" else ""
+                println("[${issue.key}] ${issue.title}$suffix")
                 println("  ${issue.url}")
             }
         }

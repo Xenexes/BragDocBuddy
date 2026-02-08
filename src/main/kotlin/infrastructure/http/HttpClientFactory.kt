@@ -19,12 +19,32 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 object HttpClientFactory {
     fun create(
         url: String,
         httpClientProperties: HttpClientProperties,
-    ): HttpClient = create(url, httpClientProperties, OkHttp)
+        additionalConfig: HttpClientConfig<*>.() -> Unit = {},
+    ): HttpClient =
+        create(url, httpClientProperties, OkHttp) {
+            engine {
+                config {
+                    connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS))
+                    dispatcher(
+                        Dispatcher(
+                            Executors.newCachedThreadPool { runnable ->
+                                Thread(runnable).apply { isDaemon = true }
+                            },
+                        ),
+                    )
+                }
+            }
+            additionalConfig()
+        }
 
     fun <T : HttpClientEngineConfig> create(
         url: String,

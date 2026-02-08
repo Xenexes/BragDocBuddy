@@ -8,4 +8,6 @@ interface JiraClient {
         email: String,
         dateRange: DateRange,
     ): List<JiraIssue>
+
+    suspend fun fetchIssuesByKeys(keys: Set<String>): List<JiraIssue>
 }
