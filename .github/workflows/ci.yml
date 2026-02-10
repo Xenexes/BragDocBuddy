@@ -1,0 +1,182 @@
+name: Check and Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+  APP_NAME: 'BragDocBuddy'
+
+jobs:
+  # ============================================================================
+  # Version Job - Derives semantic version from conventional commits
+  # ============================================================================
+  version:
+    name: Derive Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version_output.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Check if initial release
+      id: check_initial
+      run: |
+        git fetch --tags
+        if ! git tag -l "v*" | grep -q .; then
+          echo "No version tags found - this is the initial release"
+          echo "is_initial=true" >> $GITHUB_OUTPUT
+        else
+          LATEST_TAG=$(git tag -l 'v*' | sort -V | tail -1)
+          echo "Version tags already exist (latest: $LATEST_TAG)"
+          echo "is_initial=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Derive semantic version
+      id: semver
+      if: steps.check_initial.outputs.is_initial == 'false'
+      uses: paulhatch/semantic-version@v6.0.1
+      with:
+        tag_prefix: "v"
+        major_pattern: "(BREAKING CHANGE:|\\w+!:)"
+        minor_pattern: "(feat:|feature:)"
+        version_format: "${major}.${minor}.${patch}"
+        bump_each_commit: false
+        search_commit_body: true
+        user_format_type: "csv"
+
+    - name: Set version output
+      id: version_output
+      run: |
+        if [ "${{ steps.check_initial.outputs.is_initial }}" == "true" ]; then
+          echo "version=1.0.0" >> $GITHUB_OUTPUT
+          echo "📦 Initial release version: 1.0.0"
+        else
+          echo "version=${{ steps.semver.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "📦 Derived version: ${{ steps.semver.outputs.version }}"
+        fi
+
+  # ============================================================================
+  # Check Job - Runs all verification tasks (tests, ktlint, architecture tests)
+  # ============================================================================
+  check:
+    name: Check (Tests, ktlint, Konsist)
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        cache-read-only: false
+
+    - name: Set version from conventional commits
+      run: |
+        echo "Running checks with version: ${{ needs.version.outputs.version }}"
+        if grep -q "^version=" gradle.properties; then
+          sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
+        else
+          echo "version=${{ needs.version.outputs.version }}" >> gradle.properties
+        fi
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Run all checks (tests, ktlint, etc.)
+      run: ./gradlew check jacocoTestReport
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          build/test-results/**/*.xml
+
+    - name: Add coverage to PR
+      id: jacoco
+      uses: madrapps/jacoco-report@v1.7.2
+      if: github.event_name == 'pull_request'
+      with:
+        paths: |
+          ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        min-coverage-overall: 40
+        min-coverage-changed-files: 60
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v6
+      if: always()
+      with:
+        name: coverage-reports
+        path: |
+          build/reports/jacoco/test/html/
+          build/reports/tests/test/
+        retention-days: 14
+
+  # ============================================================================
+  # Build JAR - Creates universal fat JAR (main branch only)
+  # ============================================================================
+  build-jar:
+    name: Build Fat JAR
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [version, check]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        cache-read-only: false
+
+    - name: Set version from conventional commits
+      run: |
+        echo "Building version: ${{ needs.version.outputs.version }}"
+        if grep -q "^version=" gradle.properties; then
+          sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
+        else
+          echo "version=${{ needs.version.outputs.version }}" >> gradle.properties
+        fi
+        echo "Updated gradle.properties:"
+        cat gradle.properties
+
+    - name: Build fat JAR
+      run: ./gradlew clean shadowJar
+
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ env.APP_NAME }}-fat-jar
+        path: build/libs/${{ env.APP_NAME }}-*-all.jar
+        retention-days: 14

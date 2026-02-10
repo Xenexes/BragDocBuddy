@@ -1,19 +1,18 @@
-name: Build and Release
+name: Release
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run (build but do not publish release)'
+        required: false
+        type: boolean
+        default: false
 
-# Cancel in-progress runs when a new run is triggered on the same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release
+  cancel-in-progress: false
 
-# Workflow-level environment variables
 env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUTION: 'temurin'
@@ -25,15 +24,13 @@ env:
 
 jobs:
   # ============================================================================
-  # Version Job - Derives semantic version from conventional commits (Angular schema)
-  # Outputs version to be used by all other jobs
-  # Version is committed only in the release job after successful builds
+  # Version Job - Derives semantic version from conventional commits
   # ============================================================================
   version:
-    name: Derive Version from Conventional Commits
+    name: Derive Version
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to push initial tag if needed
+      contents: read
     outputs:
       version: ${{ steps.version_output.outputs.version }}
       version_changed: ${{ steps.check_version.outputs.changed }}
@@ -41,16 +38,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
       with:
-        fetch-depth: 0  # Required for full git history
-        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
 
     - name: Check if initial release
       id: check_initial
       run: |
-        # Fetch all tags from remote
         git fetch --tags
-
-        # Check if any version tags exist
         if ! git tag -l "v*" | grep -q .; then
           echo "No version tags found - this is the initial release"
           echo "is_initial=true" >> $GITHUB_OUTPUT
@@ -60,14 +53,14 @@ jobs:
           echo "is_initial=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Derive semantic version (for existing releases)
+    - name: Derive semantic version
       id: semver
       if: steps.check_initial.outputs.is_initial == 'false'
       uses: paulhatch/semantic-version@v6.0.1
       with:
         tag_prefix: "v"
-        major_pattern: "(BREAKING CHANGE:|\\w+!:)"  # BREAKING CHANGE or type!:
-        minor_pattern: "(feat:|feature:)"           # feat: triggers minor bump
+        major_pattern: "(BREAKING CHANGE:|\\w+!:)"
+        minor_pattern: "(feat:|feature:)"
         version_format: "${major}.${minor}.${patch}"
         bump_each_commit: false
         search_commit_body: true
@@ -77,14 +70,10 @@ jobs:
       id: version_output
       run: |
         if [ "${{ steps.check_initial.outputs.is_initial }}" == "true" ]; then
-          # Initial release - use 1.0.0
           echo "version=1.0.0" >> $GITHUB_OUTPUT
-          echo "version_tag=v1.0.0" >> $GITHUB_OUTPUT
           echo "📦 Initial release version: 1.0.0"
         else
-          # Use semantic version from previous step
           echo "version=${{ steps.semver.outputs.version }}" >> $GITHUB_OUTPUT
-          echo "version_tag=${{ steps.semver.outputs.version_tag }}" >> $GITHUB_OUTPUT
           echo "📦 Derived version: ${{ steps.semver.outputs.version }}"
         fi
 
@@ -99,7 +88,6 @@ jobs:
         echo "New version: $NEW_VERSION"
         echo "Is initial release: $IS_INITIAL"
 
-        # If initial release, always treat as version change
         if [ "$IS_INITIAL" == "true" ]; then
           echo "changed=true" >> $GITHUB_OUTPUT
           echo "✅ Initial release: 0.0.1 → 1.0.0"
@@ -108,19 +96,18 @@ jobs:
           echo "✅ Version will be updated: $CURRENT_VERSION → $NEW_VERSION"
         else
           echo "changed=false" >> $GITHUB_OUTPUT
-          echo "ℹ️  Version unchanged: $CURRENT_VERSION"
+          echo "ℹ️  Version unchanged: $CURRENT_VERSION — nothing to release"
         fi
 
   # ============================================================================
-  # Check Job - Runs all verification tasks (tests, ktlint, architecture tests)
+  # Check Job - Full test suite to validate before release
   # ============================================================================
   check:
-    name: Run Checks (Tests, ktlint, etc.)
+    name: Check (Tests, ktlint, Konsist)
     needs: version
     runs-on: ubuntu-latest
     permissions:
       checks: write
-      pull-requests: write
       contents: read
     steps:
     - name: Checkout code
@@ -140,8 +127,6 @@ jobs:
     - name: Set version from conventional commits
       run: |
         echo "Running checks with version: ${{ needs.version.outputs.version }}"
-        # Update version in gradle.properties (preserving other properties)
-        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
         if grep -q "^version=" gradle.properties; then
           sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
         else
@@ -160,36 +145,14 @@ jobs:
         files: |
           build/test-results/**/*.xml
 
-    - name: Add coverage to PR
-      id: jacoco
-      uses: madrapps/jacoco-report@v1.7.2
-      if: github.event_name == 'pull_request'
-      with:
-        paths: |
-          ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
-        token: ${{ secrets.GITHUB_TOKEN }}
-        min-coverage-overall: 40
-        min-coverage-changed-files: 60
-
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v6
-      if: always()
-      with:
-        name: coverage-reports
-        path: |
-          build/reports/jacoco/test/html/
-          build/reports/tests/test/
-        retention-days: 30
-
   # ============================================================================
-  # Build JAR - Creates universal fat JAR using derived version
+  # Build JAR - Creates universal fat JAR
   # ============================================================================
   build-jar:
     name: Build Fat JAR
+    if: needs.version.outputs.version_changed == 'true'
     needs: [version, check]
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ needs.version.outputs.version }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -208,8 +171,6 @@ jobs:
     - name: Set version from conventional commits
       run: |
         echo "Building version: ${{ needs.version.outputs.version }}"
-        # Update version in gradle.properties (preserving other properties)
-        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
         if grep -q "^version=" gradle.properties; then
           sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
         else
@@ -226,13 +187,14 @@ jobs:
       with:
         name: ${{ env.APP_NAME }}-fat-jar
         path: build/libs/${{ env.APP_NAME }}-*-all.jar
-        retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 14 }}
+        retention-days: 90
 
   # ============================================================================
   # Build Native Images - Creates platform-specific native executables
   # ============================================================================
   build-native:
     name: Build Native Image (${{ matrix.platform }})
+    if: needs.version.outputs.version_changed == 'true'
     needs: [version, check]
     strategy:
       fail-fast: false
@@ -272,8 +234,6 @@ jobs:
       shell: bash
       run: |
         echo "Building version: ${{ needs.version.outputs.version }}"
-        # Update version in gradle.properties (preserving other properties)
-        # Cross-platform sed: create backup and remove it (works on both Linux and macOS)
         if grep -q "^version=" gradle.properties; then
           sed -i.bak "s/^version=.*/version=${{ needs.version.outputs.version }}/" gradle.properties && rm gradle.properties.bak
         else
@@ -286,9 +246,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        # Workaround for GraalVM plugin path issue on Windows
-        # See: https://github.com/graalvm/native-build-tools/issues/754
-        echo "" >> gradle.properties  # Ensure newline
+        echo "" >> gradle.properties
         echo "org.gradle.jvmargs=-Djava.io.tmpdir=D:/temp" >> gradle.properties
         mkdir -p D:/temp
         echo "Configured temp directory for Windows build"
@@ -303,17 +261,16 @@ jobs:
       with:
         name: ${{ matrix.artifact-name }}
         path: build/native/nativeCompile/${{ env.APP_NAME }}${{ matrix.executable-suffix }}
-        retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 14 }}
+        retention-days: 90
 
   # ============================================================================
-  # Release Job
+  # Release Job - Commit version, create GitHub Release with all artifacts
   # ============================================================================
   release:
     name: Create GitHub Release
     if: |
       needs.version.outputs.version_changed == 'true' &&
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push'
+      inputs['dry-run'] == false
     needs: [version, build-jar, build-native]
     runs-on: ubuntu-latest
     permissions:
@@ -332,18 +289,14 @@ jobs:
 
         echo "Updating gradle.properties: $CURRENT_VERSION → $NEW_VERSION"
 
-        # Update version in gradle.properties
         sed -i.bak "s/^version=.*/version=$NEW_VERSION/" gradle.properties && rm gradle.properties.bak
 
-        # Check if there are changes to commit
         if git diff --quiet gradle.properties; then
           echo "ℹ️  No changes to commit - version already up to date"
         else
-          # Configure git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # Commit and push
           git add gradle.properties
           git commit -m "chore: update version to $NEW_VERSION"
           git push
@@ -359,13 +312,10 @@ jobs:
     - name: Reorganize artifacts with platform-specific names
       working-directory: release-artifacts
       run: |
-        # Create a flat structure with platform-specific names for native executables
         mkdir -p final
 
-        # Copy JAR
         find . -name "*-all.jar" -exec cp {} final/ \;
 
-        # Copy and rename native executables to include platform
         if [ -f BragDocBuddy-linux/BragDocBuddy ]; then
           cp BragDocBuddy-linux/BragDocBuddy final/BragDocBuddy-linux
         fi
@@ -412,13 +362,13 @@ jobs:
           ```shell
           curl -L https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-macos -o /Applications/BragDocBuddy && chmod +x /Applications/BragDocBuddy
           ```
-          
+
           **Linux:**
           ```shell
           curl -L https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-linux -o ~/BragDocBuddy && chmod +x ~/BragDocBuddy
           ./BragDocBuddy-linux
           ```
-          
+
           **Windows (PowerShell):**
           ```powershell
           Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.version }}/BragDocBuddy-windows.exe" -OutFile "BragDocBuddy.exe"
